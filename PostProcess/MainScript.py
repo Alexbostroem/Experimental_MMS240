@@ -8,11 +8,11 @@ from scipy.optimize import curve_fit
 plt.close('all')
 
 # Set base paths for input and output files
-input_base_path = r"Z:\MMS240\PostProcess\Carbon"
-output_directory = r"Z:\MMS240\PostProcess\Carbon\PP"
+input_base_path = r"Z:\MMS240\Experimental\PostProcess\Baseline"
+output_directory = r"Z:\MMS240\Experimental\PostProcess\Baseline\PP"
 
 # Read Torque calibration data
-CalDataNm = pd.read_csv(f"{input_base_path}\\20241110_TorqueCalibration.txt", delimiter='\t')
+CalDataNm = pd.read_csv(f"{input_base_path}\\torque_calib.txt", delimiter='\t')
 
 # Reference values for calibration and adjustments
 refCentre1 = CalDataNm['LoadL'][1]
@@ -21,16 +21,16 @@ CalDataNm['LoadL'] -= refCentre1
 CalDataNm['LoadR'] -= refCentre2
 
 # Calibration parameters
-RefPoints = np.array([0.2, 0.1, 0.05, 0, -0.05, -0.1]) * 9.82 * 0.1
+RefPoints = np.array([0, 0.05, 0.1, 0.2, -0.05, -0.1, -0.2] ) * 9.82 * 0.1
 NmCalc = 0.019 * (CalDataNm['LoadL'] + CalDataNm['LoadR'])
-CalPoints = NmCalc[[4,3,2,1,6,8]]
+CalPoints = NmCalc[[1 , 3 , 5 , 7 , 12 , 14, 16 ]]
 p = np.polyfit(CalPoints, RefPoints, 1)
 
 # Read Thrust calibration data
-CalDataT = pd.read_csv(f"{input_base_path}\\241110-ThrustCalibration.txt", delimiter='\t')
-RefPointsT = np.array([0,0.1,0.2,0.5,0,0.1,0.2,0.5]) * 9.82
+CalDataT = pd.read_csv(f"{input_base_path}\\thrust_calib.txt", delimiter='\t')
+RefPointsT = np.array([0,0.1 ,0.2,0.5,0.5,0.2,0.1,0]) * 9.82
 TMeas = CalDataT['Thrust']
-CalPointsT = TMeas[[0,1,2,3,4,5,6,7]]
+CalPointsT = TMeas[[0,1,3,5,7,9,11,12]]
 pT = np.polyfit(CalPointsT, RefPointsT, 1)
 
 # Plot calibration data with subplots
