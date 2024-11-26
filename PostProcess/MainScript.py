@@ -66,7 +66,7 @@ for ii in range(1, 3):
 
     # Calculate torque and other derived metrics
     TestData['torque'] = abs(0.019 * (TestData['LoadL'] + TestData['LoadR']) * p[0])
-    Dia = 0.236
+    Dia = 0.2286
     TestData['n'] = TestData['RPM'] / 60  # Revolutions per second
     rho = TestData['rho']
     TestData['J'] = TestData['U'] / (TestData['n'] * Dia)
