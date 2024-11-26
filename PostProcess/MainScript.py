@@ -8,8 +8,8 @@ from scipy.optimize import curve_fit
 plt.close('all')
 
 # Set base paths for input and output files
-input_base_path = r"Z:\MMS240\Experimental\PostProcess\Baseline"
-output_directory = r"Z:\MMS240\Experimental\PostProcess\Baseline\PP"
+input_base_path = r"Baseline"
+output_directory = r"Baseline\PP"
 
 # Read Torque calibration data
 CalDataNm = pd.read_csv(f"{input_base_path}\\torque_calib.txt", delimiter='\t')
@@ -57,7 +57,7 @@ plt.tight_layout()
 plt.show()
 
 # Process and save each test file
-for ii in range(2, 6):
+for ii in range(1, 3):
     # Construct the specific input file path for each iteration
     file_path = f"{input_base_path}\\241110_Carbon17ms_{ii}.txt"
     
@@ -97,7 +97,7 @@ for ii in range(2, 6):
     A = TestData[['J', 'Ct', 'Cp', 'eta']].iloc[1:-1].to_numpy()
 
     # Generate output file path with `_pp.txt` suffix
-    output_file_path = f"{output_directory}\\241110_Carbon17ms_{ii}_pp.txt"
+    output_file_path = f"{output_directory}\\baseline{ii}_pp.txt"
     
     # Save data to file
-    np.savetxt(output_file_path, A, delimiter='\t', header='J\tCt\tCp\tEta', comments='')
+    np.savetxt(output_file_path, A, delimiter=';', header='J;Ct;Cp;Eta', comments='')
