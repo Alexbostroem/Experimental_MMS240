@@ -8,11 +8,11 @@ from scipy.optimize import curve_fit
 plt.close('all')
 
 # Set base paths for input and output files
-input_base_path = r"Baseline"
-output_directory = r"Baseline\PP"
+input_base_path = r"2024_11_27"
+output_directory = r"2024_11_27\PP"
 
 # Read Torque calibration data
-CalDataNm = pd.read_csv(f"{input_base_path}\\torque_calib.txt", delimiter='\t')
+CalDataNm = pd.read_csv(f"{input_base_path}\\torque_calib_baseline.txt", delimiter='\t')
 
 # Reference values for calibration and adjustments
 refCentre1 = CalDataNm['LoadL'][1]
@@ -23,11 +23,11 @@ CalDataNm['LoadR'] -= refCentre2
 # Calibration parameters
 RefPoints = np.array([0, 0.05, 0.1, 0.2, -0.05, -0.1, -0.2] ) * 9.82 * 0.1
 NmCalc = 0.019 * (CalDataNm['LoadL'] + CalDataNm['LoadR'])
-CalPoints = NmCalc[[1 , 3 , 5 , 7 , 12 , 14, 16 ]]
+CalPoints = NmCalc[[1 , 2 , 4 , 6 , 9 , 11, 13 ]]
 p = np.polyfit(CalPoints, RefPoints, 1)
 
 # Read Thrust calibration data
-CalDataT = pd.read_csv(f"{input_base_path}\\thrust_calib.txt", delimiter='\t')
+CalDataT = pd.read_csv(f"{input_base_path}\\thrust_calib_baseline.txt", delimiter='\t')
 RefPointsT = np.array([0,0.1 ,0.2,0.5,0.5,0.2,0.1,0]) * 9.82
 TMeas = CalDataT['Thrust']
 CalPointsT = TMeas[[0,1,3,5,7,9,11,12]]
@@ -56,10 +56,29 @@ axs[1].set_title('Thrust Calibration')
 plt.tight_layout()
 plt.show()
 
+filenames = np.array([
+    # "\T1_Baseline_042_062_23ms_Rep1.txt",
+    # "\T2_Baseline_042_062_23ms_Rep1.txt",
+    # "\T2_Baseline_042_062_23ms_Rep2.txt",
+    "\T3_Baseline_042_066_23ms_Rep1.txt",
+    "\T3_Baseline_042_066_23ms_Rep2.txt",
+    "\T3_Baseline_042_066_23ms_Rep3.txt",
+    # "\T10_Severe_042_066_23ms_Rep1.txt",
+    # "\T11_Severe_042_066_23ms_Rep1.txt",
+    # "\T11_Severe_042_066_23ms_Rep2.txt",
+    # "\T12_Severe_042_066_23ms_Rep1.txt",
+    # "\T3_Baseline_042_066_23ms_Rep4.txt",
+    "\T13_Severe_042_066_23ms_Rep1.txt"
+    
+])
+
 # Process and save each test file
-for ii in range(1, 3):
+for ii in range(1, 12):
     # Construct the specific input file path for each iteration
-    file_path = f"{input_base_path}\\241110_Carbon17ms_{ii}.txt"
+    #file_path = f"{input_base_path}\\241110_Carbon17ms_{ii}.txt"
+    #file_path = f"{input_base_path}\\T3_Baseline_042_066_23ms_Rep2.txt"
+    #filenname = filenames{ii}
+    file_path = f"{input_base_path}\\{filenames[ii]}"
     
     # Read the test data
     TestData = pd.read_csv(file_path, delimiter='\t')
@@ -87,8 +106,8 @@ for ii in range(1, 3):
     
     plt.figure(99)
     plt.scatter(TestData['J'], TestData['eta'], label='Eta', marker='+')
-    plt.xlim([0.4, 1])
-    plt.ylim([0.5, 0.8])
+    #plt.xlim([0.4, 1])
+    #plt.ylim([0.5, 0.8])
     plt.xlabel('J')
     plt.legend()
     plt.show()
@@ -101,3 +120,5 @@ for ii in range(1, 3):
     
     # Save data to file
     np.savetxt(output_file_path, A, delimiter=';', header='J;Ct;Cp;Eta', comments='')
+
+  
