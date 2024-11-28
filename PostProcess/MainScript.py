@@ -78,7 +78,7 @@ def process_test_data(file_path, p_torque, p_thrust):
 
     # Calculate derived metrics
     test_data['torque'] = abs(0.019 * (test_data['LoadL'] + test_data['LoadR']) * p_torque[0])
-    dia = 0.2286
+    dia = 0.276
     test_data['n'] = test_data['RPM'] / 60  # Revolutions per second
     rho = test_data['rho']
     test_data['J'] = test_data['U'] / (test_data['n'] * dia)
@@ -126,8 +126,8 @@ plt.ylabel('Ct / Cp')
 plt.title('Comparison of Ct and Cp Across Datasets')
 plt.legend(loc='best', fontsize='small')
 plt.tight_layout()
-plt.xlim(0.7,1)
-plt.ylim(0,0.1)
+plt.xlim(0.6,0.85)
+plt.ylim(0,0.04)
 plt.show()
 
 # Plot Efficiency (Eta) in a separate figure
@@ -139,7 +139,7 @@ plt.ylabel('Efficiency (Eta)')
 plt.title('Comparison of Efficiency (Eta) Across Datasets')
 plt.legend(loc='best', fontsize='small')
 plt.tight_layout()
-plt.xlim(0.7,1)
+plt.xlim(0.6,0.85)
 plt.ylim(0,1)
 plt.show()
 
