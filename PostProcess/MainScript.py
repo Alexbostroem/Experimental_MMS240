@@ -1,301 +1,128 @@
-# %% Kalibrering
+# %%
+
 import numpy as np
-import matplotlib.pyplot as plt
-from scipy import stats
-from scipy.optimize import curve_fit
 import pandas as pd
 from pathlib import Path
-from collections import defaultdict
+import matplotlib.pyplot as plt
+from scipy.stats import ttest_ind
 
-# Close any open plots
-plt.close('all')
+# File paths
+input_base_path = Path("2024_11_27")
+output_directory = input_base_path / "PP"
 
-# Set base paths for input and output files
-input_base_path = r"2024_11_27"
-output_directory = r"2024_11_27\PP"
+# Load calibration files
+torque_calib_file = input_base_path / "torque_calib_baseline.txt"
+thrust_calib_file = input_base_path / "thrust_calib_baseline.txt"
 
-# Read Torque calibration data
-CalDataNm = pd.read_csv(f"{input_base_path}\\torque_calib_baseline.txt", delimiter='\t')
+torque_calib = pd.read_csv(torque_calib_file, delimiter='\t')
+thrust_calib = pd.read_csv(thrust_calib_file, delimiter='\t')
 
-# Reference values for calibration and adjustments
-refCentre1 = CalDataNm['LoadL'][1]
-refCentre2 = CalDataNm['LoadR'][1]
-CalDataNm['LoadL'] -= refCentre1
-CalDataNm['LoadR'] -= refCentre2
+# %%
+# Load test files
+test_files = [
+    "T1_Baseline_042_062_23ms.txt",
+    "T2_Baseline_042_062_23ms_Rep1.txt",
+    "T2_Baseline_042_062_23ms_Rep2.txt",
+    "T3_Baseline_042_066_23ms_Rep4.txt",
+    "T10_Severe_042_066_23ms_Rep1.txt",
+    "T11_Severe_042_066_23ms_Rep1.txt",
+    "T11_Severe_042_066_23ms_Rep2.txt",
+    "T12_Severe_042_066_23ms_Rep1.txt"
+]
 
-# Calibration parameters
-RefPoints = np.array([0, 0.05, 0.1, 0.2, -0.05, -0.1, -0.2] ) * 9.82 * 0.1
-NmCalc = 0.019 * (CalDataNm['LoadL'] + CalDataNm['LoadR'])
-CalPoints = NmCalc[[1 , 2 , 4 , 6 , 9 , 11, 13 ]]
-p = np.polyfit(CalPoints, RefPoints, 1)
+# Define calibration functions
+def calibrate_torque(loadL, loadR, coeff):
+    return coeff[0] * (loadL + loadR) * 0.019 + coeff[1]
 
-# Read Thrust calibration data
-CalDataT = pd.read_csv(f"{input_base_path}\\thrust_calib_baseline.txt", delimiter='\t')
-RefPointsT = np.array([0,0.1 ,0.2,0.5,0.5,0.2,0.1,0]) * 9.82
-TMeas = CalDataT['Thrust']
-CalPointsT = TMeas[[0,1,3,5,7,9,11,12]]
-pT = np.polyfit(CalPointsT, RefPointsT, 1)
+def calibrate_thrust(raw_thrust, coeff):
+    return coeff[0] * raw_thrust + coeff[1]
 
-# Plot calibration data with subplots
-fig, axs = plt.subplots(1, 2, figsize=(12, 6))
+# Fit calibration parameters for torque and thrust
+torque_ref_points = np.array([0, 0.05, 0.1, 0.2, -0.05, -0.1, -0.2]) * 9.82 * 0.1
+torque_meas = torque_calib["Torque"][:7]
+torque_coeff = np.polyfit(torque_meas, torque_ref_points, 1)
 
-# Torque Calibration Plot
-axs[0].plot(RefPoints, CalPoints, '+')
-axs[0].plot(np.polyval(p, CalPoints), CalPoints, '-')
-axs[0].set_xlabel('Reference Points (Torque)')
-axs[0].set_ylabel('Calculated Points')
-axs[0].legend(['Data Points', 'Linear Fit'])
-axs[0].set_title('Torque Calibration')
+thrust_ref_points = np.array([0, 0.1, 0.2, 0.5, -0.1, -0.2, -0.5]) * 9.82
+thrust_meas = thrust_calib["Thrust"][:7]
+thrust_coeff = np.polyfit(thrust_meas, thrust_ref_points, 1)
 
-# Thrust Calibration Plot
-axs[1].plot(RefPointsT, CalPointsT, '+')
-axs[1].plot(np.polyval(pT, CalPointsT), CalPointsT, '-')
-axs[1].set_xlabel('Reference Points (Thrust)')
-axs[1].set_ylabel('Calculated Points')
-axs[1].legend(['Data Points', 'Linear Fit'])
-axs[1].set_title('Thrust Calibration')
-
-# Show the calibration figure
-plt.tight_layout()
-plt.show()
-
-input_base_path = Path(input_base_path)
-
-
-
-# %% Råda plot med kaliberering
-
-# List all test files, excluding specific ones
-exclude_files = {'thrust_calib_baseline.txt', 'torque_calib_baseline.txt'}
-test_files = sorted(
-    file for file in input_base_path.glob("T*_*.txt") if file.name not in exclude_files
-)
-
-# Function to process test data
-def process_test_data(file_path, p_torque, p_thrust):
+# Process test files
+results = {}
+for file_name in test_files:
+    file_path = input_base_path / file_name
     test_data = pd.read_csv(file_path, delimiter='\t')
-
-
-    # Calculate derived metrics
-    test_data['torque'] = abs(0.019 * (test_data['LoadL'] + test_data['LoadR']) * p_torque[0])
-    dia = 0.276
-    test_data['n'] = test_data['RPM'] / 60  # Revolutions per second
-    rho = test_data['rho']
-    test_data['J'] = test_data['U'] / (test_data['n'] * dia)
-    test_data['Thrust'] *= p_thrust[0]
-    test_data['Ct'] = test_data['Thrust'] / (rho * (test_data['n'] ** 2) * (dia ** 4))
-    test_data['P'] = 2 * np.pi * test_data['n'] * test_data['torque']
-    test_data['Cp'] = test_data['P'] / (rho * (test_data['n'] ** 3) * (dia ** 5))
-    test_data['eta'] = test_data['J'] * test_data['Ct'] / test_data['Cp']
-
-    return test_data
-
-# Prepare lists to accumulate data for plotting
-all_ct = []
-all_cp = []
-all_eta = []
-all_labels = []
-
-# Process each test file and store data for cumulative plotting
-for file in test_files:
-    try:
-        test_data = process_test_data(file, p, pT)
-
-
-        # Accumulate data
-        all_ct.append((test_data['J'], test_data['Ct']))
-        all_cp.append((test_data['J'], test_data['Cp']))
-        all_eta.append((test_data['J'], test_data['eta']))
-        all_labels.append(file.stem)
-
-        # Save trimmed results
-        result = test_data[['J', 'Ct', 'Cp', 'eta']]
-        result.to_csv(output_directory / f"{file.stem}_pp.csv", sep=';', index=False)
     
-    except Exception as e:
-        print(f"Error processing file {file}: {e}")
+    # Apply calibrations
+    test_data["Torque"] = calibrate_torque(test_data["LoadL"], test_data["LoadR"], torque_coeff)
+    test_data["Thrust"] = calibrate_thrust(test_data["RawThr"], thrust_coeff)
+    
+    # Calculate derived metrics
+    dia = 0.276  # Propeller diameter in meters
+    test_data["n"] = test_data["RPM"] / 60  # Revolutions per second
+    test_data["J"] = test_data["U"] / (test_data["n"] * dia)
+    test_data["Ct"] = test_data["Thrust"] / (test_data["rho"] * (test_data["n"] ** 2) * (dia ** 4))
+    test_data["P"] = 2 * np.pi * test_data["n"] * test_data["Torque"]
+    test_data["Cp"] = test_data["P"] / (test_data["rho"] * (test_data["n"] ** 3) * (dia ** 5))
+    test_data["eta"] = test_data["J"] * test_data["Ct"] / test_data["Cp"]
+    
+    # Store results
+    results[file_name] = test_data[["J", "Ct", "Cp", "eta"]]
+    # Save processed data
+    test_data[["J", "Ct", "Cp", "eta"]].to_csv(output_directory / f"{file_name}_processed.txt", index=False, sep="\t")
 
-# Plot Ct and Cp in the same figure
-plt.figure(figsize=(10, 6))
-for (j_vals, ct_vals), label in zip(all_ct, all_labels):
-    plt.scatter(j_vals, ct_vals, label=f'{label} - Ct', marker='o')
-for (j_vals, cp_vals), label in zip(all_cp, all_labels):
-    plt.scatter(j_vals, cp_vals, label=f'{label} - Cp', marker='+')
-plt.xlabel('Advance Ratio (J)')
-plt.ylabel('Ct / Cp')
-plt.title('Comparison of Ct and Cp Across Datasets')
-plt.legend(loc='best', fontsize='small')
-plt.tight_layout()
-plt.xlim(0.6,0.85)
-plt.ylim(0,0.04)
-plt.show()
+# Statistical analysis for consistency
+baseline_data = pd.concat([results[file] for file in test_files if "Baseline" in file])
+severe_data = pd.concat([results[file] for file in test_files if "Severe" in file])
 
-# Plot Efficiency (Eta) in a separate figure
+# Perform t-tests on metrics (J, Ct, Cp, eta)
+metrics = ["Ct", "Cp", "eta"]
+t_test_results = {metric: ttest_ind(baseline_data[metric], severe_data[metric]) for metric in metrics}
+
+# Visualize comparison
 plt.figure(figsize=(10, 6))
-for (j_vals, eta_vals), label in zip(all_eta, all_labels):
-    plt.scatter(j_vals, eta_vals, label=label, marker='+')
-plt.xlabel('Advance Ratio (J)')
-plt.ylabel('Efficiency (Eta)')
-plt.title('Comparison of Efficiency (Eta) Across Datasets')
-plt.legend(loc='best', fontsize='small')
-plt.tight_layout()
-plt.xlim(0.6,0.85)
-plt.ylim(0,1)
-plt.show()
+for metric in metrics:
+    plt.boxplot([baseline_data[metric], severe_data[metric]], labels=["Baseline", "Severe"])
+    plt.title(f"Comparison of {metric} between Baseline and Severe Cases")
+    plt.ylabel(metric)
+    plt.show()
+
+# Output t-test results
+t_test_results
 
 # %%
+# Plot processed data for all cases
+plt.figure(figsize=(15, 10))
 
-baseline_ct = defaultdict(list)
-baseline_cp = defaultdict(list)
-baseline_eta = defaultdict(list)
+# Plot eta
+plt.subplot(3, 1, 1)
+for file_name, data in results.items():
+    filtered_data = data[(data["J"] >= 0.6) & (data["J"] <= 0.9)]
+    plt.scatter(filtered_data["J"], filtered_data["eta"], label=file_name)
+plt.title("Propeller Efficiency (eta) vs Advance Ratio (J)")
+plt.xlabel("Advance Ratio (J)")
+plt.ylabel("Efficiency (eta)")
+plt.legend()
 
-severe_ct = defaultdict(list)
-severe_cp = defaultdict(list)
-severe_eta = defaultdict(list)
+# Plot Cp
+plt.subplot(3, 1, 2)
+for file_name, data in results.items():
+    filtered_data = data[(data["J"] >= 0.6) & (data["J"] <= 0.9)]
+    plt.scatter(filtered_data["J"], filtered_data["Cp"], label=file_name)
+plt.title("Power Coefficient (Cp) vs Advance Ratio (J)")
+plt.xlabel("Advance Ratio (J)")
+plt.ylabel("Power Coefficient (Cp)")
+plt.legend()
 
+# Plot Ct
+plt.subplot(3, 1, 3)
+for file_name, data in results.items():
+    filtered_data = data[(data["J"] >= 0.6) & (data["J"] <= 0.9)]
+    plt.scatter(filtered_data["J"], filtered_data["Ct"], label=file_name)
+plt.title("Thrust Coefficient (Ct) vs Advance Ratio (J)")
+plt.xlabel("Advance Ratio (J)")
+plt.ylabel("Thrust Coefficient (Ct)")
+plt.legend()
 
-
-for file in test_files:
-    try:
-        # Process the test data
-        test_data = process_test_data(file, p, pT)
-
-        # Extract parts of the filename
-        parts = file.stem.split('_')
-        scenario_name = f"{'_'.join(parts[:2])}_{parts[-1]}"
-
-        # Determine whether the data belongs to baseline or severe
-        if 'Baseline' in parts:
-             for idx, row in test_data.iterrows():
-                baseline_ct[idx].append(row['Ct'])
-                baseline_cp[idx].append(row['Cp'])
-                baseline_eta[idx].append(row['eta'])
-        elif 'Severe' in parts:
-                for idx, row in test_data.iterrows():
-                    severe_ct[idx].append(row['Ct'])
-                    severe_cp[idx].append(row['Cp'])
-                    severe_eta[idx].append(row['eta'])
-
-    except Exception as e:
-        print(f"Error processing file {file}: {e}")
-
-
-
-# %% 
-# Function to compute mean and std for a dictionary of lists
-def compute_stats(data_dict):
-    stats = {}
-    for idx, values in data_dict.items():
-        stats[idx] = {'mean': np.mean(values), 'std': np.std(values)}
-    return stats
-
-# Compute statistics for baseline and severe datasets
-baseline_ct_stats = compute_stats(baseline_ct)
-baseline_cp_stats = compute_stats(baseline_cp)
-baseline_eta_stats = compute_stats(baseline_eta)
-
-severe_ct_stats = compute_stats(severe_ct)
-severe_cp_stats = compute_stats(severe_cp)
-severe_eta_stats = compute_stats(severe_eta)
-
-print(baseline_cp_stats)
-
+plt.tight_layout()
+plt.show()
 # %%
-# Convert stats dictionaries to DataFrames for easier analysis and visualization
-baseline_stats_df = pd.DataFrame({
-    'Index': baseline_ct_stats.keys(),
-    'Ct Mean': [baseline_ct_stats[idx]['mean'] for idx in baseline_ct_stats],
-    'Ct Std': [baseline_ct_stats[idx]['std'] for idx in baseline_ct_stats],
-    'Cp Mean': [baseline_cp_stats[idx]['mean'] for idx in baseline_cp_stats],
-    'Cp Std': [baseline_cp_stats[idx]['std'] for idx in baseline_cp_stats],
-    'Eta Mean': [baseline_eta_stats[idx]['mean'] for idx in baseline_eta_stats],
-    'Eta Std': [baseline_eta_stats[idx]['std'] for idx in baseline_eta_stats],
-}).set_index('Index')
-
-severe_stats_df = pd.DataFrame({
-    'Index': severe_ct_stats.keys(),
-    'Ct Mean': [severe_ct_stats[idx]['mean'] for idx in severe_ct_stats],
-    'Ct Std': [severe_ct_stats[idx]['std'] for idx in severe_ct_stats],
-    'Cp Mean': [severe_cp_stats[idx]['mean'] for idx in severe_cp_stats],
-    'Cp Std': [severe_cp_stats[idx]['std'] for idx in severe_cp_stats],
-    'Eta Mean': [severe_eta_stats[idx]['mean'] for idx in severe_eta_stats],
-    'Eta Std': [severe_eta_stats[idx]['std'] for idx in severe_eta_stats],
-}).set_index('Index')
-
-
-# %%
-# Plot Ct comparison
-plt.figure(figsize=(10, 6))
-plt.errorbar(
-    baseline_stats_df.index,
-    baseline_stats_df['Ct Mean'],
-    yerr=baseline_stats_df['Ct Std'],
-    fmt='o',
-    label='Baseline Ct',
-    capsize=3
-)
-plt.errorbar(
-    severe_stats_df.index,
-    severe_stats_df['Ct Mean'],
-    yerr=severe_stats_df['Ct Std'],
-    fmt='x',
-    label='Severe Ct',
-    capsize=3
-)
-plt.xlabel('Sample Index')
-plt.ylabel('Ct')
-plt.title('Comparison of Ct Between Baseline and Severe Datasets')
-plt.legend(loc='best')
-plt.tight_layout()
-plt.show()
-
-# Plot Cp comparison
-plt.figure(figsize=(10, 6))
-plt.errorbar(
-    baseline_stats_df.index,
-    baseline_stats_df['Cp Mean'],
-    yerr=baseline_stats_df['Cp Std'],
-    fmt='o',
-    label='Baseline Cp',
-    capsize=3
-)
-plt.errorbar(
-    severe_stats_df.index,
-    severe_stats_df['Cp Mean'],
-    yerr=severe_stats_df['Cp Std'],
-    fmt='x',
-    label='Severe Cp',
-    capsize=3
-)
-plt.xlabel('Sample Index')
-plt.ylabel('Cp')
-plt.title('Comparison of Cp Between Baseline and Severe Datasets')
-plt.legend(loc='best')
-plt.tight_layout()
-plt.show()
-
-# Plot Eta comparison
-plt.figure(figsize=(10, 6))
-plt.errorbar(
-    baseline_stats_df.index,
-    baseline_stats_df['Eta Mean'],
-    yerr=baseline_stats_df['Eta Std'],
-    fmt='o',
-    label='Baseline Eta',
-    capsize=3
-)
-plt.errorbar(
-    severe_stats_df.index,
-    severe_stats_df['Eta Mean'],
-    yerr=severe_stats_df['Eta Std'],
-    fmt='x',
-    label='Severe Eta',
-    capsize=3
-)
-plt.xlabel('Sample Index')
-plt.ylabel('Eta')
-plt.title('Comparison of Efficiency (Eta) Between Baseline and Severe Datasets')
-plt.legend(loc='best')
-plt.tight_layout()
-plt.show()
-
