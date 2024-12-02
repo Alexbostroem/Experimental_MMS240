@@ -1,4 +1,4 @@
-# %%
+# %% Kalibrering
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy import stats
@@ -62,14 +62,14 @@ plt.show()
 input_base_path = Path(input_base_path)
 
 
+
+# %% Råda plot med kaliberering
+
 # List all test files, excluding specific ones
 exclude_files = {'thrust_calib_baseline.txt', 'torque_calib_baseline.txt'}
 test_files = sorted(
     file for file in input_base_path.glob("T*_*.txt") if file.name not in exclude_files
 )
-
-
-# %%
 
 # Function to process test data
 def process_test_data(file_path, p_torque, p_thrust):
