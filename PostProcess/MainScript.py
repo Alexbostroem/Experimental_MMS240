@@ -18,6 +18,51 @@ torque_calib = pd.read_csv(torque_calib_file, delimiter='\t')
 thrust_calib = pd.read_csv(thrust_calib_file, delimiter='\t')
 
 
+# Read Torque calibration data
+CalDataNm = pd.read_csv(f"{input_base_path}\\torque_calib_baseline.txt", delimiter='\t')
+
+# Reference values for calibration and adjustments
+refCentre1 = CalDataNm['LoadL'][1]
+refCentre2 = CalDataNm['LoadR'][1]
+CalDataNm['LoadL'] -= refCentre1
+CalDataNm['LoadR'] -= refCentre2
+
+# Calibration parameters
+RefPoints = np.array([0, 0.05, 0.1, 0.2, -0.05, -0.1, -0.2] ) * 9.82 * 0.1
+NmCalc = 0.019 * (CalDataNm['LoadL'] + CalDataNm['LoadR'])
+CalPoints = NmCalc[[1 , 2 , 4 , 6 , 9 , 11, 13 ]]
+torque_coeff = np.polyfit(CalPoints, RefPoints, 1)
+
+# Read Thrust calibration data
+CalDataT = pd.read_csv(f"{input_base_path}\\thrust_calib_baseline.txt", delimiter='\t')
+RefPointsT = np.array([0,0.1 ,0.2,0.5,0.5,0.2,0.1,0]) * 9.82
+TMeas = CalDataT['Thrust']
+CalPointsT = TMeas[[0,1,3,5,7,9,11,12]]
+thrust_coeff = np.polyfit(CalPointsT, RefPointsT, 1)
+
+# Plot calibration data with subplots
+fig, axs = plt.subplots(1, 2, figsize=(12, 6))
+
+# Torque Calibration Plot
+axs[0].plot(RefPoints, CalPoints, '+')
+axs[0].plot(np.polyval(p, CalPoints), CalPoints, '-')
+axs[0].set_xlabel('Reference Points (Torque)')
+axs[0].set_ylabel('Calculated Points')
+axs[0].legend(['Data Points', 'Linear Fit'])
+axs[0].set_title('Torque Calibration')
+
+# Thrust Calibration Plot
+axs[1].plot(RefPointsT, CalPointsT, '+')
+axs[1].plot(np.polyval(pT, CalPointsT), CalPointsT, '-')
+axs[1].set_xlabel('Reference Points (Thrust)')
+axs[1].set_ylabel('Calculated Points')
+axs[1].legend(['Data Points', 'Linear Fit'])
+axs[1].set_title('Thrust Calibration')
+
+# Show the calibration figure
+plt.tight_layout()
+plt.show()
+
 
 # %%
 # Load test files
@@ -40,47 +85,6 @@ def calibrate_torque(loadL, loadR, coeff):
 
 def calibrate_thrust(raw_thrust, coeff):
     return coeff[0] * raw_thrust + coeff[1]
-
-# Fit calibration parameters for torque and thrust
-torque_ref_points = np.array([0, 0.05, 0.1, 0.2, -0.05, -0.1, -0.2]) * 9.82 * 0.1
-torque_meas = torque_calib["Torque"].iloc[[1, 2, 4, 6, 9, 11, 13]]
-torque_coeff = np.polyfit(torque_meas, torque_ref_points, 1)
-
-thrust_ref_points = np.array([0, 0.1, 0.2, 0.5, 0.5, 0.2, 0.1, 0]) * 9.82
-thrust_meas = thrust_calib["Thrust"].iloc[[0, 1, 3, 5, 7, 9, 11, 12]]
-thrust_coeff = np.polyfit(thrust_meas, thrust_ref_points, 1)
-
-
-
-# Torque Calibration Plot
-fig, axs = plt.subplots(2, 1, figsize=(10, 8))
-
-RefPoints = torque_ref_points
-CalPoints = torque_meas
-p = torque_coeff
-
-axs[0].plot(RefPoints, CalPoints, '+')
-axs[0].plot(np.polyval(p, CalPoints), CalPoints, '-')
-axs[0].set_xlabel('Reference Points (Torque)')
-axs[0].set_ylabel('Calculated Points')
-axs[0].legend(['Data Points', 'Linear Fit'])
-axs[0].set_title('Torque Calibration')
-
-# Thrust Calibration Plot
-RefPointsT = thrust_ref_points
-CalPointsT = thrust_meas
-pT = thrust_coeff
-
-axs[1].plot(RefPointsT, CalPointsT, '+')
-axs[1].plot(np.polyval(pT, CalPointsT), CalPointsT, '-')
-axs[1].set_xlabel('Reference Points (Thrust)')
-axs[1].set_ylabel('Calculated Points')
-axs[1].legend(['Data Points', 'Linear Fit'])
-axs[1].set_title('Thrust Calibration')
-
-# Show the calibration figure
-plt.tight_layout()
-plt.show()
 
 # %% 
 
