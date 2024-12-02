@@ -12,7 +12,7 @@ plt.close('all')
 
 # Set base paths for input and output files
 input_base_path = r"2024_11_27"
-output_directory = r"2024_11_27\PP"
+output_directory = Path(r"2024_11_27\PP")
 
 # Read Torque calibration data
 CalDataNm = pd.read_csv(f"{input_base_path}\\torque_calib_baseline.txt", delimiter='\t')
@@ -59,11 +59,10 @@ axs[1].set_title('Thrust Calibration')
 plt.tight_layout()
 plt.show()
 
-input_base_path = Path(input_base_path)
-
-
 
 # %% Råda plot med kaliberering
+
+input_base_path = Path(input_base_path)
 
 # List all test files, excluding specific ones
 exclude_files = {'thrust_calib_baseline.txt', 'torque_calib_baseline.txt'}
@@ -71,14 +70,17 @@ test_files = sorted(
     file for file in input_base_path.glob("T*_*.txt") if file.name not in exclude_files
 )
 
+
+#%%
+
 # Function to process test data
 def process_test_data(file_path, p_torque, p_thrust):
     test_data = pd.read_csv(file_path, delimiter='\t')
 
+    dia = 0.276 # Diameter of propeller in meters
 
     # Calculate derived metrics
     test_data['torque'] = abs(0.019 * (test_data['LoadL'] + test_data['LoadR']) * p_torque[0])
-    dia = 0.276
     test_data['n'] = test_data['RPM'] / 60  # Revolutions per second
     rho = test_data['rho']
     test_data['J'] = test_data['U'] / (test_data['n'] * dia)
@@ -110,7 +112,7 @@ for file in test_files:
 
         # Save trimmed results
         result = test_data[['J', 'Ct', 'Cp', 'eta']]
-        result.to_csv(output_directory / f"{file.stem}_pp.csv", sep=';', index=False)
+        result.to_csv(output_directory / f"{file.stem}_pp.txt", sep=';', index=False)
     
     except Exception as e:
         print(f"Error processing file {file}: {e}")
@@ -142,160 +144,102 @@ plt.tight_layout()
 plt.xlim(0.6,0.85)
 plt.ylim(0,1)
 plt.show()
-
 # %%
+# Create DataFrames to store Cp for all tests
+baseline_data_cp = pd.DataFrame()
+severe_data_cp = pd.DataFrame()
 
-baseline_ct = defaultdict(list)
-baseline_cp = defaultdict(list)
-baseline_eta = defaultdict(list)
+for file in output_directory.glob("T*_pp.txt"):
+    test_data = pd.read_csv(file, delimiter=';')
+    if 'Baseline' in file.stem:
+        baseline_data_cp[file.stem] = test_data['Cp']
+    else:
+        severe_data_cp[file.stem] = test_data['Cp']
 
-severe_ct = defaultdict(list)
-severe_cp = defaultdict(list)
-severe_eta = defaultdict(list)
+# calculate mean and standard deviation for cp for each sample index in baseline and severe data
+baseline_data_cp['mean'] = baseline_data_cp.mean(axis=1)
+baseline_data_cp['std'] = baseline_data_cp.std(axis=1)
+severe_data_cp['mean'] = severe_data_cp.mean(axis=1)
+severe_data_cp['std'] = severe_data_cp.std(axis=1)
 
-
-
-for file in test_files:
-    try:
-        # Process the test data
-        test_data = process_test_data(file, p, pT)
-
-        # Extract parts of the filename
-        parts = file.stem.split('_')
-        scenario_name = f"{'_'.join(parts[:2])}_{parts[-1]}"
-
-        # Determine whether the data belongs to baseline or severe
-        if 'Baseline' in parts:
-             for idx, row in test_data.iterrows():
-                baseline_ct[idx].append(row['Ct'])
-                baseline_cp[idx].append(row['Cp'])
-                baseline_eta[idx].append(row['eta'])
-        elif 'Severe' in parts:
-                for idx, row in test_data.iterrows():
-                    severe_ct[idx].append(row['Ct'])
-                    severe_cp[idx].append(row['Cp'])
-                    severe_eta[idx].append(row['eta'])
-
-    except Exception as e:
-        print(f"Error processing file {file}: {e}")
-
-
-
-# %% 
-# Function to compute mean and std for a dictionary of lists
-def compute_stats(data_dict):
-    stats = {}
-    for idx, values in data_dict.items():
-        stats[idx] = {'mean': np.mean(values), 'std': np.std(values)}
-    return stats
-
-# Compute statistics for baseline and severe datasets
-baseline_ct_stats = compute_stats(baseline_ct)
-baseline_cp_stats = compute_stats(baseline_cp)
-baseline_eta_stats = compute_stats(baseline_eta)
-
-severe_ct_stats = compute_stats(severe_ct)
-severe_cp_stats = compute_stats(severe_cp)
-severe_eta_stats = compute_stats(severe_eta)
-
-print(baseline_cp_stats)
-
-# %%
-# Convert stats dictionaries to DataFrames for easier analysis and visualization
-baseline_stats_df = pd.DataFrame({
-    'Index': baseline_ct_stats.keys(),
-    'Ct Mean': [baseline_ct_stats[idx]['mean'] for idx in baseline_ct_stats],
-    'Ct Std': [baseline_ct_stats[idx]['std'] for idx in baseline_ct_stats],
-    'Cp Mean': [baseline_cp_stats[idx]['mean'] for idx in baseline_cp_stats],
-    'Cp Std': [baseline_cp_stats[idx]['std'] for idx in baseline_cp_stats],
-    'Eta Mean': [baseline_eta_stats[idx]['mean'] for idx in baseline_eta_stats],
-    'Eta Std': [baseline_eta_stats[idx]['std'] for idx in baseline_eta_stats],
-}).set_index('Index')
-
-severe_stats_df = pd.DataFrame({
-    'Index': severe_ct_stats.keys(),
-    'Ct Mean': [severe_ct_stats[idx]['mean'] for idx in severe_ct_stats],
-    'Ct Std': [severe_ct_stats[idx]['std'] for idx in severe_ct_stats],
-    'Cp Mean': [severe_cp_stats[idx]['mean'] for idx in severe_cp_stats],
-    'Cp Std': [severe_cp_stats[idx]['std'] for idx in severe_cp_stats],
-    'Eta Mean': [severe_eta_stats[idx]['mean'] for idx in severe_eta_stats],
-    'Eta Std': [severe_eta_stats[idx]['std'] for idx in severe_eta_stats],
-}).set_index('Index')
-
-
-# %%
-# Plot Ct comparison
+# Plot Cp for baseline and severe data with sample points and shaded areas for standard deviation
 plt.figure(figsize=(10, 6))
-plt.errorbar(
-    baseline_stats_df.index,
-    baseline_stats_df['Ct Mean'],
-    yerr=baseline_stats_df['Ct Std'],
-    fmt='o',
-    label='Baseline Ct',
-    capsize=3
-)
-plt.errorbar(
-    severe_stats_df.index,
-    severe_stats_df['Ct Mean'],
-    yerr=severe_stats_df['Ct Std'],
-    fmt='x',
-    label='Severe Ct',
-    capsize=3
-)
-plt.xlabel('Sample Index')
-plt.ylabel('Ct')
-plt.title('Comparison of Ct Between Baseline and Severe Datasets')
-plt.legend(loc='best')
-plt.tight_layout()
-plt.show()
-
-# Plot Cp comparison
-plt.figure(figsize=(10, 6))
-plt.errorbar(
-    baseline_stats_df.index,
-    baseline_stats_df['Cp Mean'],
-    yerr=baseline_stats_df['Cp Std'],
-    fmt='o',
-    label='Baseline Cp',
-    capsize=3
-)
-plt.errorbar(
-    severe_stats_df.index,
-    severe_stats_df['Cp Mean'],
-    yerr=severe_stats_df['Cp Std'],
-    fmt='x',
-    label='Severe Cp',
-    capsize=3
-)
+plt.scatter(severe_data_cp.index, severe_data_cp['mean'], label='Severe', marker='o')
+plt.fill_between(severe_data_cp.index, severe_data_cp['mean'] - severe_data_cp['std'], severe_data_cp['mean'] + severe_data_cp['std'], color='grey', alpha=0.3)
+plt.scatter(baseline_data_cp.index, baseline_data_cp['mean'], label='Baseline', marker='x')
+plt.fill_between(baseline_data_cp.index, baseline_data_cp['mean'] - baseline_data_cp['std'], baseline_data_cp['mean'] + baseline_data_cp['std'], color='grey', alpha=0.3)
 plt.xlabel('Sample Index')
 plt.ylabel('Cp')
-plt.title('Comparison of Cp Between Baseline and Severe Datasets')
+plt.xlim(2, 13)
+plt.title('Comparison of Cp Across Baseline and Severe Data')
 plt.legend(loc='best')
 plt.tight_layout()
 plt.show()
 
-# Plot Eta comparison
+
+# %%
+# Create DataFrames to store Ct for all tests
+baseline_data_ct = pd.DataFrame()
+severe_data_ct = pd.DataFrame()
+
+for file in output_directory.glob("T*_pp.txt"):
+    test_data = pd.read_csv(file, delimiter=';')
+    if 'Baseline' in file.stem:
+        baseline_data_ct[file.stem] = test_data['Ct']
+    else:
+        severe_data_ct[file.stem] = test_data['Ct']
+
+# calculate mean and standard deviation for ct for each sample index in baseline and severe data
+baseline_data_ct['mean'] = baseline_data_ct.mean(axis=1)
+baseline_data_ct['std'] = baseline_data_ct.std(axis=1)
+severe_data_ct['mean'] = severe_data_ct.mean(axis=1)
+severe_data_ct['std'] = severe_data_ct.std(axis=1)
+
+# Plot Ct for baseline and severe data with sample points and shaded areas for standard deviation
 plt.figure(figsize=(10, 6))
-plt.errorbar(
-    baseline_stats_df.index,
-    baseline_stats_df['Eta Mean'],
-    yerr=baseline_stats_df['Eta Std'],
-    fmt='o',
-    label='Baseline Eta',
-    capsize=3
-)
-plt.errorbar(
-    severe_stats_df.index,
-    severe_stats_df['Eta Mean'],
-    yerr=severe_stats_df['Eta Std'],
-    fmt='x',
-    label='Severe Eta',
-    capsize=3
-)
+plt.scatter(severe_data_ct.index, severe_data_ct['mean'], label='Severe', marker='o')
+plt.fill_between(severe_data_ct.index, severe_data_ct['mean'] - severe_data_ct['std'], severe_data_ct['mean'] + severe_data_ct['std'], color='grey', alpha=0.3)
+plt.scatter(baseline_data_ct.index, baseline_data_ct['mean'], label='Baseline', marker='x')
+plt.fill_between(baseline_data_ct.index, baseline_data_ct['mean'] - baseline_data_ct['std'], baseline_data_ct['mean'] + baseline_data_ct['std'], color='grey', alpha=0.3)
+plt.xlabel('Sample Index')
+plt.ylabel('Cp')
+plt.xlim(2, 13)
+plt.title('Comparison of Ct Across Baseline and Severe Data')
+plt.legend(loc='best')
+plt.tight_layout()
+plt.show()
+
+# %%
+# %%
+# Create DataFrames to store Eta for all tests
+baseline_data_eta = pd.DataFrame()
+severe_data_eta = pd.DataFrame()
+
+for file in output_directory.glob("T*_pp.txt"):
+    test_data = pd.read_csv(file, delimiter=';')
+    if 'Baseline' in file.stem:
+        baseline_data_eta[file.stem] = test_data['eta']
+    else:
+        severe_data_eta[file.stem] = test_data['eta']
+
+# calculate mean and standard deviation for eta for each sample index in baseline and severe data
+baseline_data_eta['mean'] = baseline_data_eta.mean(axis=1)
+baseline_data_eta['std'] = baseline_data_eta.std(axis=1)
+severe_data_eta['mean'] = severe_data_eta.mean(axis=1)
+severe_data_eta['std'] = severe_data_eta.std(axis=1)
+
+# Plot Eta for baseline and severe data with sample points and shaded areas for standard deviation
+plt.figure(figsize=(10, 6))
+plt.scatter(severe_data_eta.index, severe_data_eta['mean'], label='Severe', marker='o')
+plt.fill_between(severe_data_eta.index, severe_data_eta['mean'] - severe_data_eta['std'], severe_data_eta['mean'] + severe_data_eta['std'], color='grey', alpha=0.3)
+plt.scatter(baseline_data_eta.index, baseline_data_eta['mean'], label='Baseline', marker='x')
+plt.fill_between(baseline_data_eta.index, baseline_data_eta['mean'] - baseline_data_eta['std'], baseline_data_eta['mean'] + baseline_data_eta['std'], color='grey', alpha=0.3)
 plt.xlabel('Sample Index')
 plt.ylabel('Eta')
-plt.title('Comparison of Efficiency (Eta) Between Baseline and Severe Datasets')
+plt.xlim(2, 13)
+plt.ylim(0, 1)
+plt.title('Comparison of Eta Across Baseline and Severe Data')
 plt.legend(loc='best')
 plt.tight_layout()
 plt.show()
-
+# %%
