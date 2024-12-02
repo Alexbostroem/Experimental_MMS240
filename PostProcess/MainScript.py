@@ -150,108 +150,17 @@ plt.ylim(0,1)
 plt.show()
 
 
-
 # %%
 
-# Create DataFrames to store Cp for all tests
-baseline_data_cp = pd.DataFrame()
-severe_data_cp = pd.DataFrame()
+baseline_keys = ['T1_Baseline_042_062_23ms', 'T2_Baseline_042_062_23ms_Rep1', 'T2_Baseline_042_062_23ms_Rep2', 'T3_Baseline_042_066_23ms_Rep2', 'T3_Baseline_042_066_23ms_Rep3', 'T3_Baseline_042_066_23ms_Rep4']
+baseline_data = {key: datasets[key] for key in baseline_keys}
 
-for file in output_directory.glob("T*_pp.txt"):
-    test_data = pd.read_csv(file, delimiter=';')
-    if 'Baseline' in file.stem:
-        baseline_data_cp[file.stem] = test_data['Cp']
-    else:
-        severe_data_cp[file.stem] = test_data['Cp']
+# Gather thrust data from all baseline datasets, taking the sample range from 2 to end
+thrust_data = pd.DataFrame({key: data['Thrust'].iloc[2:-1].reset_index(drop=True) for key, data in baseline_data.items()})
 
-
-
-# calculate mean and standard deviation for cp for each sample index in baseline and severe data
-baseline_data_cp['mean'] = baseline_data_cp.mean(axis=1)
-baseline_data_cp['std'] = baseline_data_cp.std(axis=1)
-severe_data_cp['mean'] = severe_data_cp.mean(axis=1)
-severe_data_cp['std'] = severe_data_cp.std(axis=1)
-
-# Plot Cp for baseline and severe data with sample points and shaded areas for standard deviation
-plt.figure(figsize=(10, 6))
-plt.scatter(severe_data_cp.index, severe_data_cp['mean'], label='Severe', marker='o')
-plt.fill_between(severe_data_cp.index, severe_data_cp['mean'] - severe_data_cp['std'], severe_data_cp['mean'] + severe_data_cp['std'], color='grey', alpha=0.3)
-plt.scatter(baseline_data_cp.index, baseline_data_cp['mean'], label='Baseline', marker='x')
-plt.fill_between(baseline_data_cp.index, baseline_data_cp['mean'] - baseline_data_cp['std'], baseline_data_cp['mean'] + baseline_data_cp['std'], color='grey', alpha=0.3)
-plt.xlabel('Sample Index')
-plt.ylabel('Cp')
-plt.xlim(2, 13)
-plt.title('Comparison of Cp Across Baseline and Severe Data')
-plt.legend(loc='best')
-plt.tight_layout()
-plt.show()
-
-
-# %%
-# Create DataFrames to store Ct for all tests
-baseline_data_ct = pd.DataFrame()
-severe_data_ct = pd.DataFrame()
-
-for file in output_directory.glob("T*_pp.txt"):
-    test_data = pd.read_csv(file, delimiter=';')
-    if 'Baseline' in file.stem:
-        baseline_data_ct[file.stem] = test_data['Ct']
-    else:
-        severe_data_ct[file.stem] = test_data['Ct']
-
-# calculate mean and standard deviation for ct for each sample index in baseline and severe data
-baseline_data_ct['mean'] = baseline_data_ct.mean(axis=1)
-baseline_data_ct['std'] = baseline_data_ct.std(axis=1)
-severe_data_ct['mean'] = severe_data_ct.mean(axis=1)
-severe_data_ct['std'] = severe_data_ct.std(axis=1)
-
-# Plot Ct for baseline and severe data with sample points and shaded areas for standard deviation
-plt.figure(figsize=(10, 6))
-plt.scatter(severe_data_ct.index, severe_data_ct['mean'], label='Severe', marker='o')
-plt.fill_between(severe_data_ct.index, severe_data_ct['mean'] - severe_data_ct['std'], severe_data_ct['mean'] + severe_data_ct['std'], color='grey', alpha=0.3)
-plt.scatter(baseline_data_ct.index, baseline_data_ct['mean'], label='Baseline', marker='x')
-plt.fill_between(baseline_data_ct.index, baseline_data_ct['mean'] - baseline_data_ct['std'], baseline_data_ct['mean'] + baseline_data_ct['std'], color='grey', alpha=0.3)
-plt.xlabel('Sample Index')
-plt.ylabel('Cp')
-plt.xlim(2, 13)
-plt.title('Comparison of Ct Across Baseline and Severe Data')
-plt.legend(loc='best')
-plt.tight_layout()
-plt.show()
-
-# %%
-# %%
-# Create DataFrames to store Eta for all tests
-baseline_data_eta = pd.DataFrame()
-severe_data_eta = pd.DataFrame()
-
-for file in output_directory.glob("T*_pp.txt"):
-    test_data = pd.read_csv(file, delimiter=';')
-    if 'Baseline' in file.stem:
-        baseline_data_eta[file.stem] = test_data['eta']
-    else:
-        severe_data_eta[file.stem] = test_data['eta']
-
-# calculate mean and standard deviation for eta for each sample index in baseline and severe data
-baseline_data_eta['mean'] = baseline_data_eta.mean(axis=1)
-baseline_data_eta['std'] = baseline_data_eta.std(axis=1)
-severe_data_eta['mean'] = severe_data_eta.mean(axis=1)
-severe_data_eta['std'] = severe_data_eta.std(axis=1)
-
-# Plot Eta for baseline and severe data with sample points and shaded areas for standard deviation
-plt.figure(figsize=(10, 6))
-plt.scatter(severe_data_eta.index, severe_data_eta['mean'], label='Severe', marker='o')
-plt.fill_between(severe_data_eta.index, severe_data_eta['mean'] - severe_data_eta['std'], severe_data_eta['mean'] + severe_data_eta['std'], color='grey', alpha=0.3)
-plt.scatter(baseline_data_eta.index, baseline_data_eta['mean'], label='Baseline', marker='x')
-plt.fill_between(baseline_data_eta.index, baseline_data_eta['mean'] - baseline_data_eta['std'], baseline_data_eta['mean'] + baseline_data_eta['std'], color='grey', alpha=0.3)
-plt.xlabel('Sample Index')
-plt.ylabel('Eta')
-plt.xlim(2, 13)
-plt.ylim(0, 1)
-plt.title('Comparison of Eta Across Baseline and Severe Data')
-plt.legend(loc='best')
-plt.tight_layout()
-plt.show()
+# Compute mean and standard deviation of thrust
+thrust_mean = thrust_data.mean(axis=1)
+thrust_std = thrust_data.std(axis=1)
 
 
 
@@ -315,7 +224,7 @@ torque_uncertainty = np.sqrt(
 
 # Sensor uncertainties
 uncertainties = {
-    'T': thrust_uncertainty,  # Thrust uncertainty (N)
+    'T': thrust_std,  # Thrust uncertainty (N)
     'rho': 0,                 # Air density uncertainty
     'n': 10 / 60,             # RPM uncertainty
     'd': 0.000049,             # Diameter uncertainty prusa SLS 0.049 Printer Precision (m)
@@ -323,7 +232,9 @@ uncertainties = {
     'omega': 0,               # Angular velocity uncertainty (rad/s)
     'V': 0.1                  # Air velocity uncertainty (m/s)
 }
-# %%
+
+
+
 # Loop through data points to compute CT, CP, Eta, and uncertainties
 
 for i in range(len(T_values)):
@@ -338,7 +249,7 @@ for i in range(len(T_values)):
         'Variables': [T, rho, n, d, Q, omega, V],
         'Values': [T_value, rho_value, n_value, d_value, Q_value, omega_value, V_value],
         'Error_type': ['abs', 'abs', 'abs', 'abs', 'abs', 'abs', 'abs'],
-        'Error': [uncertainties['T'], uncertainties['rho'], uncertainties['n'],
+        'Error': [uncertainties['T'][i], uncertainties['rho'], uncertainties['n'],
                   uncertainties['d'], uncertainties['Q'], uncertainties['omega'], uncertainties['V']]
     }
 
@@ -353,7 +264,6 @@ for i in range(len(T_values)):
     Eta_errors.append(Eta_sum_uncert)
 
 
-# %%
 # Plot CT, CP, and Eta with shaded error areas
 fig, axs = plt.subplots(3, 1, figsize=(10, 15))
 
@@ -388,6 +298,112 @@ axs[1].set_xlim(0.5, 0.95)
 # Plot Eta
 axs[2].scatter(J_num, Eta_values, color='blue', label='Sample Points')
 axs[2].fill_between(J_num, Eta_values - Eta_errors, Eta_values + Eta_errors, color='grey', alpha=0.3)
+axs[2].set_title('Efficiency (Eta) vs J', fontsize=14)
+axs[2].set_xlabel('J', fontsize=12)
+axs[2].set_ylabel('Eta', fontsize=12)
+axs[2].grid(True)
+axs[2].legend()
+axs[2].set_xlim(0.5, 0.95)
+
+plt.tight_layout()
+plt.show()
+
+# %%
+
+# Prepare lists to accumulate data for plotting with errors
+all_ct_errors = []
+all_cp_errors = []
+all_eta_errors = []
+
+# Loop through each baseline dataset to compute errors
+for key in baseline_keys:
+    TestData = datasets[key]
+
+    # Extract variables from the data
+    T_values = TestData["Thrust"].iloc[2:-1].reset_index(drop=True)  # Thrust (N)
+    Q_values = TestData["Torque"].iloc[2:-1].reset_index(drop=True)  # Torque (Nm)
+    RPS_values = TestData["n"].iloc[2:-1].reset_index(drop=True)     # Rotational speed 
+    rho_values = TestData["rho"].iloc[2:-1].reset_index(drop=True)   # Air density (kg/m^3)
+    CT_values = TestData['Ct'].iloc[2:-1].reset_index(drop=True)
+    CP_values = TestData['Cp'].iloc[2:-1].reset_index(drop=True)
+    Eta_values = TestData['eta'].iloc[2:-1].reset_index(drop=True)
+    J_num = TestData['J'].iloc[2:-1].reset_index(drop=True)
+    omega_values = 2 * np.pi * RPS_values  # Angular velocity (rad/s)
+
+    # Placeholder for computed values and errors
+    CT_errors = []
+    CP_errors = []
+    Eta_errors = []
+
+    # Loop through data points to compute CT, CP, Eta, and uncertainties
+    for i in range(len(T_values)):
+        T_value = T_values[i]  
+        Q_value = Q_values[i]
+        n_value = RPS_values[i]
+        rho_value = rho_values[i]
+        omega_value = omega_values[i]
+
+        # Define variable inputs for the Taylor propagation
+        dict_variables_input = {
+            'Variables': [T, rho, n, d, Q, omega, V],
+            'Values': [T_value, rho_value, n_value, d_value, Q_value, omega_value, V_value],
+            'Error_type': ['abs', 'abs', 'abs', 'abs', 'abs', 'abs', 'abs'],
+            'Error': [uncertainties['T'][i], uncertainties['rho'], uncertainties['n'],
+                      uncertainties['d'], uncertainties['Q'], uncertainties['omega'], uncertainties['V']]
+        }
+
+        # Compute uncertainties
+        CT_uncertainties, CT_sum_uncert, _, _ = Taylor_error_propagation(CT_Expr, dict_variables_input)
+        CP_uncertainties, CP_sum_uncert, _, _ = Taylor_error_propagation(CP_Expr, dict_variables_input)
+        Eta_uncertainties, Eta_sum_uncert, _, _ = Taylor_error_propagation(Eta_Expr, dict_variables_input)
+
+        # Append results
+        CT_errors.append(CT_sum_uncert)
+        CP_errors.append(CP_sum_uncert)
+        Eta_errors.append(Eta_sum_uncert)
+
+    # Accumulate data
+    all_ct.append((J_num, CT_values))
+    all_cp.append((J_num, CP_values))
+    all_eta.append((J_num, Eta_values))
+    all_ct_errors.append(CT_errors)
+    all_cp_errors.append(CP_errors)
+    all_eta_errors.append(Eta_errors)
+    all_labels.append(key)
+
+    print(all_ct_errors)
+    print(all_ct)
+
+# %%
+# Plot CT, CP, and Eta with shaded error areas for all datasets
+fig, axs = plt.subplots(3, 1, figsize=(10, 15))
+
+# Plot CT
+for (j_vals, ct_vals), ct_errs, label in zip(all_ct, all_ct_errors, all_labels):
+    axs[0].fill_between(j_vals, ct_vals - ct_errs, ct_vals + ct_errs, color='grey', alpha=0.3)
+    axs[0].scatter(j_vals, ct_vals, label=label, marker='o')
+axs[0].set_title('Thrust Coefficient (C_T) vs J', fontsize=14)
+axs[0].set_xlabel('J', fontsize=12)
+axs[0].set_ylabel('C_T', fontsize=12)
+axs[0].grid(True)
+axs[0].legend()
+axs[0].set_xlim(0.5, 0.95)
+
+# Plot CP
+for (j_vals, cp_vals), cp_errs, label in zip(all_cp, all_cp_errors, all_labels):
+    axs[1].fill_between(j_vals, cp_vals - cp_errs, cp_vals + cp_errs, color='grey', alpha=0.3)
+    axs[1].scatter(j_vals, cp_vals, label=label, marker='+')
+axs[1].set_title('Power Coefficient (C_P) vs J', fontsize=14)
+axs[1].set_xlabel('J', fontsize=12)
+axs[1].set_ylabel('C_P', fontsize=12)
+axs[1].grid(True)
+axs[1].legend()
+axs[1].set_xlim(0.5, 0.95)
+
+# Plot Eta
+for (j_vals, eta_vals), eta_errs, label in zip(all_eta, all_eta_errors, all_labels):
+    axs[2].fill_between(j_vals, eta_vals - eta_errs, eta_vals + eta_errs, color='grey', alpha=0.3)
+    axs[2].scatter(j_vals, eta_vals, label=label, marker='+')
 axs[2].set_title('Efficiency (Eta) vs J', fontsize=14)
 axs[2].set_xlabel('J', fontsize=12)
 axs[2].set_ylabel('Eta', fontsize=12)
