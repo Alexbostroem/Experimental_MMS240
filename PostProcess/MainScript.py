@@ -23,6 +23,8 @@ test_files = [
     "T1_Baseline_042_062_23ms.txt",
     "T2_Baseline_042_062_23ms_Rep1.txt",
     "T2_Baseline_042_062_23ms_Rep2.txt",
+    "T3_Baseline_042_066_23ms_Rep2.txt",
+    "T3_Baseline_042_066_23ms_Rep3.txt",
     "T3_Baseline_042_066_23ms_Rep4.txt",
     "T10_Severe_042_066_23ms_Rep1.txt",
     "T11_Severe_042_066_23ms_Rep1.txt",
@@ -45,6 +47,12 @@ torque_coeff = np.polyfit(torque_meas, torque_ref_points, 1)
 thrust_ref_points = np.array([0, 0.1, 0.2, 0.5, -0.1, -0.2, -0.5]) * 9.82
 thrust_meas = thrust_calib["Thrust"][:7]
 thrust_coeff = np.polyfit(thrust_meas, thrust_ref_points, 1)
+
+
+
+
+
+# %% 
 
 # Process test files
 results = {}
