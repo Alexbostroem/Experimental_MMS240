@@ -3,6 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy import stats
 from scipy.optimize import curve_fit
+import os
 
 # Close any open plots
 plt.close('all')
@@ -120,5 +121,53 @@ for ii in range(1, 12):
     
     # Save data to file
     np.savetxt(output_file_path, A, delimiter=';', header='J;Ct;Cp;Eta', comments='')
+    # Get all filenames in the input directory
+    all_files = os.listdir(input_base_path)
+
+    # Filter out only the relevant test files
+    test_files = [f for f in all_files if f.startswith('T') and f.endswith('.txt')]
+
+    # Process and save each test file
+    for file_name in test_files:
+        file_path = os.path.join(input_base_path, file_name)
+        
+        # Read the test data
+        TestData = pd.read_csv(file_path, delimiter='\t')
+
+        # Calculate torque and other derived metrics
+        TestData['torque'] = abs(0.019 * (TestData['LoadL'] + TestData['LoadR']) * p[0])
+        Dia = 0.2286
+        TestData['n'] = TestData['RPM'] / 60  # Revolutions per second
+        rho = TestData['rho']
+        TestData['J'] = TestData['U'] / (TestData['n'] * Dia)
+        TestData['Thrust'] = TestData['Thrust'] * pT[0]
+        TestData['Ct'] = TestData['Thrust'] / (rho * (TestData['n'] ** 2) * (Dia ** 4))
+        TestData['P'] = 2 * np.pi * TestData['n'] * TestData['torque']
+        TestData['Cp'] = TestData['P'] / (rho * (TestData['n'] ** 3) * (Dia ** 5))
+        TestData['eta'] = TestData['J'] * TestData['Ct'] / TestData['Cp']
+
+        # Plot data
+        plt.figure(98)
+        plt.scatter(TestData['J'], TestData['Ct'], label='Ct')
+        plt.scatter(TestData['J'], TestData['Cp'], label='Cp', marker='+')
+        plt.xlabel('J')
+        plt.xlim([0.4, 1])
+        plt.legend()
+        plt.show()
+        
+        plt.figure(99)
+        plt.scatter(TestData['J'], TestData['eta'], label='Eta', marker='+')
+        plt.xlabel('J')
+        plt.legend()
+        plt.show()
+
+        # Prepare data to save, trimming the first and last rows
+        A = TestData[['J', 'Ct', 'Cp', 'eta']].iloc[1:-1].to_numpy()
+
+        # Generate output file path with `_pp.txt` suffix
+        output_file_path = os.path.join(output_directory, f"{os.path.splitext(file_name)[0]}_pp.txt")
+        
+        # Save data to file
+        np.savetxt(output_file_path, A, delimiter=';', header='J;Ct;Cp;Eta', comments='')
 
   
