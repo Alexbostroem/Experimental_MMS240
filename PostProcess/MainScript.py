@@ -13,11 +13,12 @@ from Taylor_error import Taylor_error_propagation
 plt.close('all')
 
 # Set base paths for input and output files
-input_base_path = r"2024_11_27"
-output_directory = Path(r"2024_11_27\PP")
+current_dir = os.path.dirname(os.path.abspath(__file__))
+input_base_path = os.path.join(current_dir, "2024_11_27")
+output_directory = os.path.join(current_dir, "2024_11_27/PP")
 
 # Read Torque calibration data
-CalDataNm = pd.read_csv(f"{input_base_path}\\torque_calib_baseline.txt", delimiter='\t')
+CalDataNm = pd.read_csv(f"{input_base_path}/torque_calib_baseline.txt", delimiter='\t')
 
 # Reference values for calibration and adjustments
 refCentre1 = CalDataNm['LoadL'][1]
@@ -32,7 +33,7 @@ CalPoints = NmCalc[[1 , 2 , 4 , 6 , 9 , 11, 13 ]]
 p = np.polyfit(CalPoints, RefPoints, 1)
 
 # Read Thrust calibration data
-CalDataT = pd.read_csv(f"{input_base_path}\\thrust_calib_baseline.txt", delimiter='\t')
+CalDataT = pd.read_csv(f"{input_base_path}/thrust_calib_baseline.txt", delimiter='\t')
 RefPointsT = np.array([0,0.1 ,0.2,0.5,0.5,0.2,0.1,0]) * 9.82
 TMeas = CalDataT['Thrust']
 CalPointsT = TMeas[[0,1,3,5,7,9,11,12]]
@@ -314,6 +315,9 @@ plt.show()
 all_ct_errors = []
 all_cp_errors = []
 all_eta_errors = []
+all_ct = []
+all_cp = []
+all_eta = []
 
 # Loop through each baseline dataset to compute errors
 for key in baseline_keys:
@@ -370,16 +374,18 @@ for key in baseline_keys:
     all_cp_errors.append(CP_errors)
     all_eta_errors.append(Eta_errors)
     all_labels.append(key)
+   
 
-    print(all_ct_errors)
-    print(all_ct)
 
 # %%
+
+
 # Plot CT, CP, and Eta with shaded error areas for all datasets
 fig, axs = plt.subplots(3, 1, figsize=(10, 15))
 
 # Plot CT
 for (j_vals, ct_vals), ct_errs, label in zip(all_ct, all_ct_errors, all_labels):
+    ct_errs = np.array(ct_errs, dtype=np.float64)
     axs[0].fill_between(j_vals, ct_vals - ct_errs, ct_vals + ct_errs, color='grey', alpha=0.3)
     axs[0].scatter(j_vals, ct_vals, label=label, marker='o')
 axs[0].set_title('Thrust Coefficient (C_T) vs J', fontsize=14)
@@ -391,6 +397,7 @@ axs[0].set_xlim(0.5, 0.95)
 
 # Plot CP
 for (j_vals, cp_vals), cp_errs, label in zip(all_cp, all_cp_errors, all_labels):
+    cp_errs = np.array(cp_errs, dtype=np.float64)
     axs[1].fill_between(j_vals, cp_vals - cp_errs, cp_vals + cp_errs, color='grey', alpha=0.3)
     axs[1].scatter(j_vals, cp_vals, label=label, marker='+')
 axs[1].set_title('Power Coefficient (C_P) vs J', fontsize=14)
@@ -402,6 +409,7 @@ axs[1].set_xlim(0.5, 0.95)
 
 # Plot Eta
 for (j_vals, eta_vals), eta_errs, label in zip(all_eta, all_eta_errors, all_labels):
+    eta_errs = np.array(eta_errs, dtype=np.float64)
     axs[2].fill_between(j_vals, eta_vals - eta_errs, eta_vals + eta_errs, color='grey', alpha=0.3)
     axs[2].scatter(j_vals, eta_vals, label=label, marker='+')
 axs[2].set_title('Efficiency (Eta) vs J', fontsize=14)
