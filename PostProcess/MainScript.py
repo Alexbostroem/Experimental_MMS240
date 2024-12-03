@@ -8,12 +8,14 @@ import os
 # Close any open plots
 plt.close('all')
 
+
 # Set base paths for input and output files
-input_base_path = r"2024_11_27"
-output_directory = r"2024_11_27\PP"
+current_dir = os.path.dirname(os.path.abspath(__file__))
+input_base_path = os.path.join(current_dir, "2024_11_27")
+output_directory = os.path.join(current_dir, "2024_11_27/PP")
 
 # Read Torque calibration data
-CalDataNm = pd.read_csv(f"{input_base_path}\\torque_calib_baseline.txt", delimiter='\t')
+CalDataNm = pd.read_csv(f"{input_base_path}/torque_calib_baseline.txt", delimiter='\t')
 
 # Reference values for calibration and adjustments
 refCentre1 = CalDataNm['LoadL'][1]
@@ -28,7 +30,7 @@ CalPoints = NmCalc[[1 , 2 , 4 , 6 , 9 , 11, 13 ]]
 p = np.polyfit(CalPoints, RefPoints, 1)
 
 # Read Thrust calibration data
-CalDataT = pd.read_csv(f"{input_base_path}\\thrust_calib_baseline.txt", delimiter='\t')
+CalDataT = pd.read_csv(f"{input_base_path}/thrust_calib_baseline.txt", delimiter='\t')
 RefPointsT = np.array([0,0.1 ,0.2,0.5,0.5,0.2,0.1,0]) * 9.82
 TMeas = CalDataT['Thrust']
 CalPointsT = TMeas[[0,1,3,5,7,9,11,12]]
