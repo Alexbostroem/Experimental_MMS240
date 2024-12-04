@@ -7,7 +7,23 @@ from scipy.optimize import curve_fit
 import os
 from scipy.interpolate import interp1d
 from Taylor_error import Taylor_error_propagation
+from MCSolver_GPT import MonteCarlo_error_propagation
 from sympy import symbols
+
+
+# Read in CFD data of baseline to a pandas dataframe
+df_baseline= pd.read_csv('../CFD/cfd_data_baseline_sweep.csv')
+df_baseline.head()
+
+df_baseline.columns = [
+    "RPM", "Cp", "RPM_eta", "Eta", 
+    "RPM_thrust", "Thrust", 
+    "RPM_power", "Power", 
+    "RPM_ct", "Ct", "RPM_J", "J", 
+    "RPM_torque", "Torque"
+]
+df_baseline = df_baseline.drop(columns=[col for col in df_baseline.columns if col.startswith('RPM_')])
+
 
 # Close any open plots
 plt.close('all')
@@ -207,7 +223,8 @@ plt.show()
 range_start = 3
 range_end = -1
 
-rpm_range = np.linspace(6400, 8300, 30)
+rpm_range = np.linspace(6400, 8300, 22)
+
 
 interpolated_thrust_baseline = []
 interpolated_thrust_severe = []
@@ -244,39 +261,18 @@ plt.legend()
 plt.title('Severe Thrust')
 plt.show()
 
-# %%
 mean_thrust_baseline = np.mean(interpolated_thrust_baseline, axis=0)
 mean_thrust_severe = np.mean(interpolated_thrust_severe, axis=0)
 
 std_thrust_baseline = np.std(interpolated_thrust_baseline, axis=0)
 std_thrust_severe = np.std(interpolated_thrust_severe, axis=0)
 
-# Plot mean baseline thrust with uncertainty
-plt.figure(108)
-plt.plot(rpm_range, mean_thrust_baseline, label='Mean Thrust Baseline')
-plt.fill_between(rpm_range, mean_thrust_baseline - std_thrust_baseline, mean_thrust_baseline + std_thrust_baseline, alpha=0.2)
-plt.xlabel('RPM')
-plt.ylabel('Thrust (N)')
-plt.legend()
-plt.title('Baseline Mean Thrust with Uncertainty')
-plt.show()
-
-# Plot mean severe thrust with uncertainty
-plt.figure(109)
-plt.plot(rpm_range, mean_thrust_severe, label='Mean Thrust Severe')
-plt.fill_between(rpm_range, mean_thrust_severe - std_thrust_severe, mean_thrust_severe + std_thrust_severe, alpha=0.2)
-plt.xlabel('RPM')
-plt.ylabel('Thrust (N)')
-plt.legend()
-plt.title('Severe Mean Thrust with Uncertainty')
-plt.show()
-
-# %%
 
 # Convert RPM range to advance ratio and plot mean thrust for baseline and severe cases with uncertainty
 plt.figure(110)
 J_range = 23 / ((rpm_range / 60) * Dia)  # Advance ratio
 plt.plot(J_range, mean_thrust_baseline, label='Mean Thrust Baseline')
+plt.plot(df_baseline['J'], df_baseline['Thrust'] *2 , label='CFD Thrust Baseline')
 plt.fill_between(J_range, mean_thrust_baseline - std_thrust_baseline, mean_thrust_baseline + std_thrust_baseline, alpha=0.2)
 plt.plot(J_range, mean_thrust_severe, label='Mean Thrust Severe')
 plt.fill_between(J_range, mean_thrust_severe - std_thrust_severe, mean_thrust_severe + std_thrust_severe, alpha=0.2)
@@ -322,39 +318,18 @@ plt.legend()
 plt.title('Severe Torque')
 plt.show()
 
-# %%
 mean_torque_baseline = np.mean(interpolated_torque_baseline, axis=0)
 mean_torque_severe = np.mean(interpolated_torque_severe, axis=0)
 
 std_torque_baseline = np.std(interpolated_torque_baseline, axis=0)
 std_torque_severe = np.std(interpolated_torque_severe, axis=0)
 
-# Plot mean baseline torque with uncertainty
-plt.figure(108)
-plt.plot(rpm_range, mean_torque_baseline, label='Mean Torque Baseline')
-plt.fill_between(rpm_range, mean_torque_baseline - std_torque_baseline, mean_torque_baseline + std_torque_baseline, alpha=0.2)
-plt.xlabel('RPM')
-plt.ylabel('Torque (Nm)')
-plt.legend()
-plt.title('Baseline Mean Torque with Uncertainty')
-plt.show()
-
-# Plot mean severe torque with uncertainty
-plt.figure(109)
-plt.plot(rpm_range, mean_torque_severe, label='Mean Torque Severe')
-plt.fill_between(rpm_range, mean_torque_severe - std_torque_severe, mean_torque_severe + std_torque_severe, alpha=0.2)
-plt.xlabel('RPM')
-plt.ylabel('Torque (Nm)')
-plt.legend()
-plt.title('Severe Mean Torque with Uncertainty')
-plt.show()
-
-# %%
 
 # Convert RPM range to advance ratio and plot mean torque for baseline and severe cases with uncertainty
 J_range = 23 / ((rpm_range / 60) * Dia)  # Advance ratio
 plt.figure(110)
 plt.plot(J_range, mean_torque_baseline, label='Mean Torque Baseline')
+plt.plot(df_baseline['J'], df_baseline['Torque'], label='CFD Torque Baseline')
 plt.fill_between(J_range, mean_torque_baseline - std_torque_baseline, mean_torque_baseline + std_torque_baseline, alpha=0.2)
 plt.plot(J_range, mean_torque_severe, label='Mean Torque Severe')
 plt.fill_between(J_range, mean_torque_severe - std_torque_severe, mean_torque_severe + std_torque_severe, alpha=0.2)
@@ -382,8 +357,9 @@ plt.legend()
 plt.title('Baseline Mean RPM with Uncertainty')
 plt.show()
 
-# %%
 
+
+#%% 
 interpolated_eta_baseline = []
 interpolated_eta_severe = []
 
@@ -394,8 +370,6 @@ for eta, rpm in zip(all_eta_baseline, all_rpm_baseline):
 for eta, rpm in zip(all_eta_severe, all_rpm_severe):
     f = interp1d(rpm[range_start:range_end], eta[range_start:range_end], kind='linear', fill_value="extrapolate")
     interpolated_eta_severe.append(f(rpm_range))   
-
-# Plot interpolated eta data and compare with sample data
 
 plt.figure(106)
 for eta in interpolated_eta_baseline:
@@ -425,29 +399,10 @@ mean_eta_severe = np.mean(interpolated_eta_severe, axis=0)
 std_eta_baseline = np.std(interpolated_eta_baseline, axis=0)
 std_eta_severe = np.std(interpolated_eta_severe, axis=0)
 
-# Plot mean baseline eta with uncertainty
-plt.figure(108)
-plt.plot(rpm_range, mean_eta_baseline, label='Mean Eta Baseline')
-plt.fill_between(rpm_range, mean_eta_baseline - std_eta_baseline, mean_eta_baseline + std_eta_baseline, alpha=0.2)
-plt.xlabel('RPM')
-plt.ylabel('Eta')
-plt.legend()
-plt.title('Baseline Mean Eta with Uncertainty')
-plt.show()
-
-# Plot mean severe eta with uncertainty
-plt.figure(109)
-plt.plot(rpm_range, mean_eta_severe, label='Mean Eta Severe')
-plt.fill_between(rpm_range, mean_eta_severe - std_eta_severe, mean_eta_severe + std_eta_severe, alpha=0.2)
-plt.xlabel('RPM')
-plt.ylabel('Eta')
-plt.legend()
-plt.title('Severe Mean Eta with Uncertainty')
-plt.show()
-
 # Convert RPM range to advance ratio and plot mean eta for baseline and severe cases with uncertainty
 plt.figure(110)
 plt.plot(J_range, mean_eta_baseline, label='Mean Eta Baseline')
+plt.plot(df_baseline['J'], df_baseline['Eta'], label='CFD Eta Baseline')
 plt.fill_between(J_range, mean_eta_baseline - std_eta_baseline, mean_eta_baseline + std_eta_baseline, alpha=0.2)
 plt.plot(J_range, mean_eta_severe, label='Mean Eta Severe')
 plt.fill_between(J_range, mean_eta_severe - std_eta_severe, mean_eta_severe + std_eta_severe, alpha=0.2)
@@ -455,6 +410,116 @@ plt.xlabel('J')
 plt.ylabel('Eta')
 plt.legend()
 plt.title('Mean Eta with Uncertainty')
+plt.show()
+
+# %%
+
+interpolated_Ct_baseline = []
+interpolated_Ct_severe = []
+
+for Ct, rpm in zip(all_Ct_baseline, all_rpm_baseline):
+    f = interp1d(rpm[range_start:range_end], Ct[range_start:range_end], kind='linear', fill_value="extrapolate")
+    interpolated_Ct_baseline.append(f(rpm_range))
+
+for Ct, rpm in zip(all_Ct_severe, all_rpm_severe):
+    f = interp1d(rpm[range_start:range_end], Ct[range_start:range_end], kind='linear', fill_value="extrapolate")
+    interpolated_Ct_severe.append(f(rpm_range))   
+
+plt.figure(106)
+for Ct in interpolated_Ct_baseline:
+    plt.plot(rpm_range, Ct, label='Ct Baseline')
+for Ct, rpm in zip(all_Ct_baseline, all_rpm_baseline):
+    plt.scatter(rpm[range_start:range_end], Ct[range_start:range_end], marker='x')
+plt.xlabel('RPM')
+plt.ylabel('Ct')
+plt.legend()
+plt.title('Baseline Ct')
+plt.show()
+
+plt.figure(107)
+for Ct in interpolated_Ct_severe:
+    plt.plot(rpm_range, Ct, label='Ct Severe')
+for Ct, rpm in zip(all_Ct_severe, all_rpm_severe):
+    plt.scatter(rpm[range_start:range_end], Ct[range_start:range_end], marker='x')
+plt.xlabel('RPM')
+plt.ylabel('Ct')
+plt.legend()
+plt.title('Severe Ct')
+plt.show()
+
+mean_Ct_baseline = np.mean(interpolated_Ct_baseline, axis=0)
+mean_Ct_severe = np.mean(interpolated_Ct_severe, axis=0)
+
+std_Ct_baseline = np.std(interpolated_Ct_baseline, axis=0)
+std_Ct_severe = np.std(interpolated_Ct_severe, axis=0)
+
+
+# Convert RPM range to advance ratio and plot mean eta for baseline and severe cases with uncertainty
+plt.figure(110)
+plt.plot(J_range, mean_Ct_baseline, label='Mean Ct Baseline')
+plt.plot(df_baseline['J'], df_baseline['Ct'], label='CFD Ct Baseline')
+plt.fill_between(J_range, mean_Ct_baseline - std_Ct_baseline, mean_Ct_baseline + std_Ct_baseline, alpha=0.2)
+plt.plot(J_range, mean_Ct_severe, label='Mean Ct Severe')
+plt.fill_between(J_range, mean_Ct_severe - std_Ct_severe, mean_Ct_severe + std_Ct_severe, alpha=0.2)
+plt.xlabel('J')
+plt.ylabel('Ct')
+plt.legend()
+plt.title('Mean Ct with Uncertainty')
+plt.show()
+
+
+# %%
+
+interpolated_Cp_baseline = []
+interpolated_Cp_severe = []
+
+for Cp, rpm in zip(all_Cp_baseline, all_rpm_baseline):
+    f = interp1d(rpm[range_start:range_end], Cp[range_start:range_end], kind='linear', fill_value="extrapolate")
+    interpolated_Cp_baseline.append(f(rpm_range))
+
+for Cp, rpm in zip(all_Cp_severe, all_rpm_severe):
+    f = interp1d(rpm[range_start:range_end], Cp[range_start:range_end], kind='linear', fill_value="extrapolate")
+    interpolated_Cp_severe.append(f(rpm_range))   
+
+plt.figure(106)
+for Cp in interpolated_Cp_baseline:
+    plt.plot(rpm_range, Cp, label='Cp Baseline')
+for Cp, rpm in zip(all_Cp_baseline, all_rpm_baseline):
+    plt.scatter(rpm[range_start:range_end], Cp[range_start:range_end], marker='x')
+plt.xlabel('RPM')
+plt.ylabel('Cp')
+plt.legend()
+plt.title('Baseline Cp')
+plt.show()
+
+plt.figure(107)
+for Cp in interpolated_Cp_severe:
+    plt.plot(rpm_range, Cp, label='Cp Severe')
+for Cp, rpm in zip(all_Cp_severe, all_rpm_severe):
+    plt.scatter(rpm[range_start:range_end], Cp[range_start:range_end], marker='x')
+plt.xlabel('RPM')
+plt.ylabel('Cp')
+plt.legend()
+plt.title('Severe Cp')
+plt.show()
+
+mean_Cp_baseline = np.mean(interpolated_Cp_baseline, axis=0)
+mean_Cp_severe = np.mean(interpolated_Cp_severe, axis=0)
+
+std_Cp_baseline = np.std(interpolated_Cp_baseline, axis=0)
+std_Cp_severe = np.std(interpolated_Cp_severe, axis=0)
+
+# Convert RPM range to advance ratio and plot mean eta for baseline and severe cases with uncertainty
+plt.figure(110)
+plt.plot(J_range, mean_Cp_baseline, label='Mean Cp Baseline')
+plt.plot(df_baseline['J'], df_baseline['Cp'], label='CFD Cp Baseline')
+plt.fill_between(J_range, mean_Cp_baseline - std_Cp_baseline, mean_Cp_baseline + std_Cp_baseline, alpha=0.2)
+plt.plot(J_range, mean_Cp_severe, label='Mean Cp Severe')
+plt.fill_between(J_range, mean_Cp_severe - std_Cp_severe, mean_Cp_severe + std_Cp_severe, alpha=0.2)
+plt.xlabel('J')
+plt.ylabel('Cp')
+plt.legend()
+plt.title('Mean Cp with Uncertainty')
 plt.show()
 
 # %%
@@ -476,21 +541,41 @@ Eta_errors = []
 
 # Compute errors for baseline data
 
+# Thrust and torque sensor uncertainties
+full_scale_thrust = 9.81  # Full scale in N (1 kg capacity = 9.81 N)
+thrust_uncertainty = np.sqrt(
+    (0.05 / 100 * full_scale_thrust)**2 +  # Non-linearity
+    (0.05 / 100 * full_scale_thrust)**2 +  # Hysteresis
+    (0.03 / 100 * full_scale_thrust)**2 +  # Repeatability
+    (1 / 100 * full_scale_thrust)**2 +     # Zero balance
+    (0.05 / 100 * full_scale_thrust)**2    # Creep
+)
+
+full_scale_torque = 1 * 9.81 * 0.019  # 1 kg capacity at 19 mm arm 
+torque_uncertainty = np.sqrt(
+    (0.05 / 100 * full_scale_torque)**2 +  # Non-linearity
+    (0.03 / 100 * full_scale_torque)**2 +  # Reproducibility
+    (0.03 / 100 * full_scale_torque)**2 +  # Hysteresis
+    (0.1 / 100 * full_scale_torque)**2 +   # Zero-point comparison
+    (0.1 / 100 * full_scale_torque)**2     # Creep
+)
+
 for i in range(len(mean_rpm_baseline)):
     # Sensor uncertainties
     uncertainties = {
-        'T': std_thrust_baseline[i],  # Thrust uncertainty (N)
+        'T': thrust_uncertainty,  # Thrust uncertainty (N) std_thrust_baseline[i]
         'rho': 0,                 # Air density uncertainty
-        'n': std_rpm_baseline[i]/60,             # RPM uncertainty
+        'n': 10/60 ,              # RPS uncertainty std_rpm_baseline[i]/60
         'd': 0.0003,              # Diameter uncertainty (m)
-        'Q': std_torque_baseline[i],  # Torque uncertainty (Nm)
+        'Q': torque_uncertainty,  # Torque uncertainty (Nm)
         'omega': 0,               # Angular velocity uncertainty (rad/s)
         'V': 0.1                  # Air velocity uncertainty (m/s)
     }
+
     T_value = mean_thrust_baseline[i]
     Q_value = mean_torque_baseline[i]
     n_value = mean_rpm_baseline[i] / 60
-    rho_value = 1.225
+    rho_value = 1.188
     omega_value = 2 * np.pi * n_value
 
     # Define variable inputs for the Taylor propagation
@@ -503,10 +588,11 @@ for i in range(len(mean_rpm_baseline)):
     }
 
     # Compute uncertainties
-    CT_uncertainties, CT_sum_uncert, _, _ = Taylor_error_propagation(CT_Expr, dict_variables_input)
-    CP_uncertainties, CP_sum_uncert, _, _ = Taylor_error_propagation(CP_Expr, dict_variables_input)
-    Eta_uncertainties, Eta_sum_uncert, _, _ = Taylor_error_propagation(Eta_Expr, dict_variables_input)
+    CT_uncertainties, CT_sum_uncert = MonteCarlo_error_propagation(CT_Expr, dict_variables_input,100)
+    CP_uncertainties, CP_sum_uncert = MonteCarlo_error_propagation(CP_Expr, dict_variables_input,100)
+    Eta_uncertainties, Eta_sum_uncert = MonteCarlo_error_propagation(Eta_Expr, dict_variables_input,100)
 
+    
     # Append results
     CT_errors.append(CT_sum_uncert)
     CP_errors.append(CP_sum_uncert)
@@ -519,7 +605,8 @@ plt.figure(111)
 fig, axs = plt.subplots(3, 1, figsize=(10, 15))
 
 # Plot CT
-axs[0].errorbar(J_range, mean_thrust_baseline, yerr=CT_errors, fmt='o', capsize=5, label='C_T')
+axs[0].errorbar(J_range, mean_Ct_baseline, yerr=CT_errors, fmt='o', capsize=5, label='C_T')
+axs[0].fill_between(J_range, mean_Ct_baseline - std_Ct_baseline, mean_Ct_baseline + std_Ct_baseline, alpha=0.2)
 axs[0].set_title('Thrust Coefficient (C_T) vs J', fontsize=14)
 axs[0].set_xlabel('J', fontsize=12)
 axs[0].set_ylabel('C_T', fontsize=12)
@@ -527,8 +614,9 @@ axs[0].grid(True)
 axs[0].legend()
 
 # Plot CP
-axs[1].errorbar(J_range, mean_torque_baseline, yerr=CP_errors, fmt='o', capsize=5, label='C_P', color='red')
+axs[1].errorbar(J_range, mean_Cp_baseline, yerr=CP_errors, fmt='o', capsize=5, label='C_P', color='red')
 axs[1].set_title('Power Coefficient (C_P) vs J', fontsize=14)
+axs[1].fill_between(J_range, mean_Cp_baseline - std_Cp_baseline, mean_Cp_baseline + std_Cp_baseline, alpha=0.2)
 axs[1].set_xlabel('J', fontsize=12)
 axs[1].set_ylabel('C_P', fontsize=12)
 axs[1].grid(True)
@@ -537,6 +625,7 @@ axs[1].legend()
 # Plot Eta
 axs[2].errorbar(J_range, mean_eta_baseline, yerr=Eta_errors, fmt='o', capsize=5, label='Eta', color='green')
 axs[2].set_title('Efficiency (Eta) vs J', fontsize=14)
+axs[2].fill_between(J_range, mean_eta_baseline - std_eta_baseline, mean_eta_baseline + std_eta_baseline, alpha=0.2)
 axs[2].set_xlabel('J', fontsize=12)
 axs[2].set_ylabel('Eta', fontsize=12)
 axs[2].set_ylim(0, 1)
@@ -547,10 +636,24 @@ plt.tight_layout()
 plt.show()
 
 # %%
+'''
+# Plot histogram of individual uncertainties contributing to Eta
+plt.figure(112)
+uncertainty_labels = ['Thrust (T)', 'Density (rho)', 'RPM (n)', 'Diameter (d)', 'Torque (Q)', 'Angular Velocity (omega)', 'Velocity (V)']
+eta_uncertainty_contributions = np.array(Eta_uncertainties)
 
-print(Eta_uncertainties)
-print(std_thrust_baseline[i])
-print(T_value)
+# Normalize contributions to percentage
+eta_uncertainty_percentages = eta_uncertainty_contributions / np.sum(eta_uncertainty_contributions) * 100
+
+plt.bar(uncertainty_labels, eta_uncertainty_percentages)
+plt.xlabel('Uncertainty Source')
+plt.ylabel('Contribution to Eta Uncertainty (%)')
+plt.title('Contribution of Individual Uncertainties to Eta at last point')
+plt.xticks(rotation=45)
+plt.tight_layout()
+plt.show()
+
+'''
 # %%
 
-# %%
+
