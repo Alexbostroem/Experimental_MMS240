@@ -280,6 +280,7 @@ plt.xlabel('J')
 plt.ylabel('Thrust (N)')
 plt.legend()
 plt.title('Mean Thrust with Uncertainty')
+plt.savefig(os.path.join(output_directory, 'Mean Thrust with Uncertainty.png'), dpi=300)
 plt.show()
 
 # %%
@@ -337,6 +338,7 @@ plt.xlabel('J')
 plt.ylabel('Torque (Nm)')
 plt.legend()
 plt.title('Mean Torque with Uncertainty')
+plt.savefig(os.path.join(output_directory, 'Mean Torque with Uncertainty.png'), dpi=300)
 plt.show()
 
 # %%
@@ -410,6 +412,7 @@ plt.xlabel('J')
 plt.ylabel('Eta')
 plt.legend()
 plt.title('Mean Eta with Uncertainty')
+plt.savefig(os.path.join(output_directory, 'Mean Eta with Uncertainty.png'), dpi=300)
 plt.show()
 
 # %%
@@ -465,6 +468,7 @@ plt.xlabel('J')
 plt.ylabel('Ct')
 plt.legend()
 plt.title('Mean Ct with Uncertainty')
+plt.savefig(os.path.join(output_directory, 'Mean Ct with Uncertainty.png'), dpi=300)
 plt.show()
 
 
@@ -520,6 +524,7 @@ plt.xlabel('J')
 plt.ylabel('Cp')
 plt.legend()
 plt.title('Mean Cp with Uncertainty')
+plt.savefig(os.path.join(output_directory, 'Mean Cp with Uncertainty.png'), dpi=300)
 plt.show()
 
 # %%
