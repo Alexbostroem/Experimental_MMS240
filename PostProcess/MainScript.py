@@ -25,6 +25,19 @@ df_baseline.columns = [
 df_baseline = df_baseline.drop(columns=[col for col in df_baseline.columns if col.startswith('RPM_')])
 
 
+# Read in CFD data of severe to a pandas dataframe
+df_severe= pd.read_csv('../CFD/cfd_data_severe_sweep.csv')
+df_severe.head()
+
+df_severe.columns = [
+    "RPM", "Cp", "RPM_eta", "Eta", 
+    "RPM_thrust", "Thrust", 
+    "RPM_power", "Power", 
+    "RPM_ct", "Ct", "RPM_J", "J", 
+    "RPM_torque", "Torque"
+]
+df_severe = df_severe.drop(columns=[col for col in df_severe.columns if col.startswith('RPM_')])
+
 # Close any open plots
 plt.close('all')
 
@@ -273,6 +286,7 @@ plt.figure(110)
 J_range = 23 / ((rpm_range / 60) * Dia)  # Advance ratio
 plt.plot(J_range, mean_thrust_baseline, label='Mean Thrust Baseline')
 plt.plot(df_baseline['J'], df_baseline['Thrust'] *2 , label='CFD Thrust Baseline')
+plt.plot(df_severe['J'], df_severe['Thrust'] *2, label='CFD Thrust Severe')
 plt.fill_between(J_range, mean_thrust_baseline - std_thrust_baseline, mean_thrust_baseline + std_thrust_baseline, alpha=0.2)
 plt.plot(J_range, mean_thrust_severe, label='Mean Thrust Severe')
 plt.fill_between(J_range, mean_thrust_severe - std_thrust_severe, mean_thrust_severe + std_thrust_severe, alpha=0.2)
@@ -331,6 +345,7 @@ J_range = 23 / ((rpm_range / 60) * Dia)  # Advance ratio
 plt.figure(110)
 plt.plot(J_range, mean_torque_baseline, label='Mean Torque Baseline')
 plt.plot(df_baseline['J'], df_baseline['Torque'], label='CFD Torque Baseline')
+plt.plot(df_severe['J'], df_severe['Torque'], label='CFD Torque Severe')
 plt.fill_between(J_range, mean_torque_baseline - std_torque_baseline, mean_torque_baseline + std_torque_baseline, alpha=0.2)
 plt.plot(J_range, mean_torque_severe, label='Mean Torque Severe')
 plt.fill_between(J_range, mean_torque_severe - std_torque_severe, mean_torque_severe + std_torque_severe, alpha=0.2)
@@ -348,16 +363,6 @@ mean_rpm_severe = np.mean([np.interp(rpm_range, rpm[range_start:range_end], rpm[
 
 std_rpm_baseline = np.std([np.interp(rpm_range, rpm[range_start:range_end], rpm[range_start:range_end]) for rpm in all_rpm_baseline], axis=0)
 std_rpm_severe = np.std([np.interp(rpm_range, rpm[range_start:range_end], rpm[range_start:range_end]) for rpm in all_rpm_severe], axis=0)
-
-# Plot mean baseline rpm with uncertainty
-plt.figure(108)
-plt.plot(rpm_range, mean_rpm_baseline, label='Mean RPM Baseline')
-plt.fill_between(rpm_range, mean_rpm_baseline - std_rpm_baseline, mean_rpm_baseline + std_rpm_baseline, alpha=0.2)
-plt.xlabel('RPM')
-plt.ylabel('RPM')
-plt.legend()
-plt.title('Baseline Mean RPM with Uncertainty')
-plt.show()
 
 
 
@@ -405,6 +410,7 @@ std_eta_severe = np.std(interpolated_eta_severe, axis=0)
 plt.figure(110)
 plt.plot(J_range, mean_eta_baseline, label='Mean Eta Baseline')
 plt.plot(df_baseline['J'], df_baseline['Eta'], label='CFD Eta Baseline')
+plt.plot(df_severe['J'], df_severe['Eta'], label='CFD Eta Severe')
 plt.fill_between(J_range, mean_eta_baseline - std_eta_baseline, mean_eta_baseline + std_eta_baseline, alpha=0.2)
 plt.plot(J_range, mean_eta_severe, label='Mean Eta Severe')
 plt.fill_between(J_range, mean_eta_severe - std_eta_severe, mean_eta_severe + std_eta_severe, alpha=0.2)
@@ -461,6 +467,7 @@ std_Ct_severe = np.std(interpolated_Ct_severe, axis=0)
 plt.figure(110)
 plt.plot(J_range, mean_Ct_baseline, label='Mean Ct Baseline')
 plt.plot(df_baseline['J'], df_baseline['Ct'], label='CFD Ct Baseline')
+plt.plot(df_severe['J'], df_severe['Ct'], label='CFD Ct Severe')
 plt.fill_between(J_range, mean_Ct_baseline - std_Ct_baseline, mean_Ct_baseline + std_Ct_baseline, alpha=0.2)
 plt.plot(J_range, mean_Ct_severe, label='Mean Ct Severe')
 plt.fill_between(J_range, mean_Ct_severe - std_Ct_severe, mean_Ct_severe + std_Ct_severe, alpha=0.2)
@@ -517,6 +524,7 @@ std_Cp_severe = np.std(interpolated_Cp_severe, axis=0)
 plt.figure(110)
 plt.plot(J_range, mean_Cp_baseline, label='Mean Cp Baseline')
 plt.plot(df_baseline['J'], df_baseline['Cp'], label='CFD Cp Baseline')
+plt.plot(df_severe['J'], df_severe['Cp'], label='CFD Cp Severe')
 plt.fill_between(J_range, mean_Cp_baseline - std_Cp_baseline, mean_Cp_baseline + std_Cp_baseline, alpha=0.2)
 plt.plot(J_range, mean_Cp_severe, label='Mean Cp Severe')
 plt.fill_between(J_range, mean_Cp_severe - std_Cp_severe, mean_Cp_severe + std_Cp_severe, alpha=0.2)
@@ -549,20 +557,13 @@ Eta_errors = []
 # Thrust and torque sensor uncertainties
 full_scale_thrust = 9.81  # Full scale in N (1 kg capacity = 9.81 N)
 thrust_uncertainty = np.sqrt(
-    (0.05 / 100 * full_scale_thrust)**2 +  # Non-linearity
-    (0.05 / 100 * full_scale_thrust)**2 +  # Hysteresis
-    (0.03 / 100 * full_scale_thrust)**2 +  # Repeatability
-    (1 / 100 * full_scale_thrust)**2 +     # Zero balance
-    (0.05 / 100 * full_scale_thrust)**2    # Creep
+    (0.05 / 100 * full_scale_thrust)**2   # Non-linearity
+
 )
 
 full_scale_torque = 1 * 9.81 * 0.019  # 1 kg capacity at 19 mm arm 
 torque_uncertainty = np.sqrt(
-    (0.05 / 100 * full_scale_torque)**2 +  # Non-linearity
-    (0.03 / 100 * full_scale_torque)**2 +  # Reproducibility
-    (0.03 / 100 * full_scale_torque)**2 +  # Hysteresis
-    (0.1 / 100 * full_scale_torque)**2 +   # Zero-point comparison
-    (0.1 / 100 * full_scale_torque)**2     # Creep
+    (0.05 / 100 * full_scale_torque)**2   # Non-linearity
 )
 
 for i in range(len(mean_rpm_baseline)):
@@ -593,9 +594,9 @@ for i in range(len(mean_rpm_baseline)):
     }
 
     # Compute uncertainties
-    CT_uncertainties, CT_sum_uncert = MonteCarlo_error_propagation(CT_Expr, dict_variables_input,100)
-    CP_uncertainties, CP_sum_uncert = MonteCarlo_error_propagation(CP_Expr, dict_variables_input,100)
-    Eta_uncertainties, Eta_sum_uncert = MonteCarlo_error_propagation(Eta_Expr, dict_variables_input,100)
+    CT_uncertainties, CT_sum_uncert,_,_ = Taylor_error_propagation(CT_Expr, dict_variables_input)
+    CP_uncertainties, CP_sum_uncert,_,_ = Taylor_error_propagation(CP_Expr, dict_variables_input)
+    Eta_uncertainties, Eta_sum_uncert,_,_ = Taylor_error_propagation(Eta_Expr, dict_variables_input)
 
     
     # Append results
@@ -661,4 +662,118 @@ plt.show()
 '''
 # %%
 
+# %%
+# Placeholder for computed values and errors
+CT_errors_severe = []
+CP_errors_severe = []
+Eta_errors_severe = []
 
+# Compute errors for severe data
+
+# Thrust and torque sensor uncertainties
+full_scale_thrust = 9.81  # Full scale in N (1 kg capacity = 9.81 N)
+thrust_uncertainty = np.sqrt(
+    (0.05 / 100 * full_scale_thrust)**2  # Non-linearity
+    )
+
+full_scale_torque = 1 * 9.81 * 0.019  # 1 kg capacity at 19 mm arm 
+
+torque_uncertainty = np.sqrt(
+    (0.05 / 100 * full_scale_torque)**2   # Non-linearity
+    )
+
+for i in range(len(mean_rpm_severe)):
+    # Sensor uncertainties
+    uncertainties = {
+        'T': thrust_uncertainty,  # Thrust uncertainty (N) std_thrust_severe[i]
+        'rho': 0,                 # Air density uncertainty
+        'n': 10/60 ,              # RPS uncertainty std_rpm_severe[i]/60
+        'd': 0.0003,              # Diameter uncertainty (m)
+        'Q': torque_uncertainty,  # Torque uncertainty (Nm)
+        'omega': 0,               # Angular velocity uncertainty (rad/s)
+        'V': 0.1                  # Air velocity uncertainty (m/s)
+    }
+
+    T_value = mean_thrust_severe[i]
+    Q_value = mean_torque_severe[i]
+    n_value = mean_rpm_severe[i] / 60
+    rho_value = 1.188
+    omega_value = 2 * np.pi * n_value
+
+    # Define variable inputs for the Taylor propagation
+    dict_variables_input = {
+        'Variables': [T, rho, n, d, Q, omega, V],
+        'Values': [T_value, rho_value, n_value, Dia, Q_value, omega_value, 23],
+        'Error_type': ['abs', 'abs', 'abs', 'abs', 'abs', 'abs', 'abs'],
+        'Error': [uncertainties['T'], uncertainties['rho'], uncertainties['n'],
+                  uncertainties['d'], uncertainties['Q'], uncertainties['omega'], uncertainties['V']]
+    }
+
+    # Compute uncertainties
+    CT_uncertainties, CT_sum_uncert,_,_ = Taylor_error_propagation(CT_Expr, dict_variables_input)
+    CP_uncertainties, CP_sum_uncert,_,_ = Taylor_error_propagation(CP_Expr, dict_variables_input)
+    Eta_uncertainties, Eta_sum_uncert,_,_ = Taylor_error_propagation(Eta_Expr, dict_variables_input)
+
+    
+    # Append results
+    CT_errors_severe.append(CT_sum_uncert)
+    CP_errors_severe.append(CP_sum_uncert)
+    Eta_errors_severe.append(Eta_sum_uncert)
+
+# %%
+
+# Plot CT, CP, and Eta with error bars over J for severe data
+plt.figure(111)
+fig, axs = plt.subplots(3, 1, figsize=(10, 15))
+
+# Plot CT
+axs[0].errorbar(J_range, mean_Ct_severe, yerr=CT_errors_severe, fmt='o', capsize=5, label='C_T')
+axs[0].fill_between(J_range, mean_Ct_severe - std_Ct_severe, mean_Ct_severe + std_Ct_severe, alpha=0.2)
+axs[0].set_title('Thrust Coefficient (C_T) vs J', fontsize=14)
+axs[0].set_xlabel('J', fontsize=12)
+axs[0].set_ylabel('C_T', fontsize=12)
+axs[0].grid(True)
+axs[0].legend()
+
+# Plot CP
+axs[1].errorbar(J_range, mean_Cp_severe, yerr=CP_errors_severe, fmt='o', capsize=5, label='C_P', color='red')
+axs[1].set_title('Power Coefficient (C_P) vs J', fontsize=14)
+axs[1].fill_between(J_range, mean_Cp_severe - std_Cp_severe, mean_Cp_severe + std_Cp_severe, alpha=0.2)
+axs[1].set_xlabel('J', fontsize=12)
+axs[1].set_ylabel('C_P', fontsize=12)
+axs[1].grid(True)
+axs[1].legend()
+
+# Plot Eta
+axs[2].errorbar(J_range, mean_eta_severe, yerr=Eta_errors_severe, fmt='o', capsize=5, label='Eta', color='green')
+axs[2].set_title('Efficiency (Eta) vs J', fontsize=14)
+axs[2].fill_between(J_range, mean_eta_severe - std_eta_severe, mean_eta_severe + std_eta_severe, alpha=0.2)
+axs[2].set_xlabel('J', fontsize=12)
+axs[2].set_ylabel('Eta', fontsize=12)
+axs[2].set_ylim(0, 1)
+axs[2].grid(True)
+axs[2].legend()
+
+plt.tight_layout()
+plt.show()
+
+
+# %%
+
+# Plot Eta with error bars over J for baseline and severe data in same figure
+plt.figure(113)
+fig, axs = plt.subplots(1, 1, figsize=(10, 5))
+
+# Plot Eta
+axs.errorbar(J_range, mean_eta_baseline, yerr=Eta_errors, fmt='o', capsize=5, label='Eta Baseline', color='green')
+
+axs.errorbar(J_range, mean_eta_severe, yerr=Eta_errors_severe, fmt='o', capsize=5, label='Eta Severe', color='red')
+
+axs.set_title('Efficiency (Eta) vs J', fontsize=14)
+axs.set_xlabel('J', fontsize=12)
+axs.set_ylabel('Eta', fontsize=12)
+axs.set_ylim(0, 1)
+axs.grid(True)
+axs.legend()
+
+# %%
