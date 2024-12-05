@@ -122,6 +122,10 @@ all_torque_baseline = []
 all_torque_severe = []
 all_rpm_baseline = []
 all_rpm_severe = []
+all_temperature_baseline = []
+all_pressure_baseline = []
+all_temperature_severe = []
+all_pressure_severe = []
 
 
 # Process and save each test file
@@ -152,6 +156,9 @@ for file_name in test_files:
         all_rpm_baseline.append(TestData['RPM'])
         all_thrust_baseline.append(TestData['Thrust'])
         all_torque_baseline.append(TestData['Torque'])
+        all_temperature_baseline.append(TestData['T'])
+        all_pressure_baseline.append(TestData['Pa'])
+
     elif 'Severe' in file_name:
         all_J_severe.append(TestData['J'])
         all_Ct_severe.append(TestData['Ct'])
@@ -160,6 +167,8 @@ for file_name in test_files:
         all_rpm_severe.append(TestData['RPM'])
         all_thrust_severe.append(TestData['Thrust'])
         all_torque_severe.append(TestData['Torque'])
+        all_temperature_severe.append(TestData['T'])
+        all_pressure_severe.append(TestData['Pa'])
 
 
     # Prepare data to save, trimming the first and last rows
@@ -535,7 +544,9 @@ plt.title('Mean Cp with Uncertainty')
 plt.savefig(os.path.join(output_directory, 'Mean Cp with Uncertainty.png'), dpi=300)
 plt.show()
 
-# %%
+
+#%%
+
 
 # Define symbols
 T, rho, n, d, Q, omega, V = symbols('T rho n d Q omega V')
@@ -570,7 +581,7 @@ for i in range(len(mean_rpm_baseline)):
     # Sensor uncertainties
     uncertainties = {
         'T': thrust_uncertainty,  # Thrust uncertainty (N) std_thrust_baseline[i]
-        'rho': 0,                 # Air density uncertainty
+        'rho': 0.0037,                 # Air density uncertainty
         'n': 10/60 ,              # RPS uncertainty std_rpm_baseline[i]/60
         'd': 0.0003,              # Diameter uncertainty (m)
         'Q': torque_uncertainty,  # Torque uncertainty (Nm)
@@ -641,26 +652,6 @@ axs[2].legend()
 plt.tight_layout()
 plt.show()
 
-# %%
-'''
-# Plot histogram of individual uncertainties contributing to Eta
-plt.figure(112)
-uncertainty_labels = ['Thrust (T)', 'Density (rho)', 'RPM (n)', 'Diameter (d)', 'Torque (Q)', 'Angular Velocity (omega)', 'Velocity (V)']
-eta_uncertainty_contributions = np.array(Eta_uncertainties)
-
-# Normalize contributions to percentage
-eta_uncertainty_percentages = eta_uncertainty_contributions / np.sum(eta_uncertainty_contributions) * 100
-
-plt.bar(uncertainty_labels, eta_uncertainty_percentages)
-plt.xlabel('Uncertainty Source')
-plt.ylabel('Contribution to Eta Uncertainty (%)')
-plt.title('Contribution of Individual Uncertainties to Eta at last point')
-plt.xticks(rotation=45)
-plt.tight_layout()
-plt.show()
-
-'''
-# %%
 
 # %%
 # Placeholder for computed values and errors
@@ -682,11 +673,12 @@ torque_uncertainty = np.sqrt(
     (0.05 / 100 * full_scale_torque)**2   # Non-linearity
     )
 
+
 for i in range(len(mean_rpm_severe)):
     # Sensor uncertainties
     uncertainties = {
         'T': thrust_uncertainty,  # Thrust uncertainty (N) std_thrust_severe[i]
-        'rho': 0,                 # Air density uncertainty
+        'rho': 0.0037,              # Air density uncertainty
         'n': 10/60 ,              # RPS uncertainty std_rpm_severe[i]/60
         'd': 0.0003,              # Diameter uncertainty (m)
         'Q': torque_uncertainty,  # Torque uncertainty (Nm)
