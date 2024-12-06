@@ -581,11 +581,11 @@ for i in range(len(mean_rpm_baseline)):
     # Sensor uncertainties
     uncertainties = {
         'T': thrust_uncertainty,  # Thrust uncertainty (N) std_thrust_baseline[i]
-        'rho': 0.0037,                 # Air density uncertainty
+        'rho': 0.0037,            # Air density uncertainty
         'n': 10/60 ,              # RPS uncertainty std_rpm_baseline[i]/60
         'd': 0.0003,              # Diameter uncertainty (m)
         'Q': torque_uncertainty,  # Torque uncertainty (Nm)
-        'omega': 0,               # Angular velocity uncertainty (rad/s)
+        'omega': 0 ,               # Angular velocity uncertainty (rad/s)
         'V': 0.1                  # Air velocity uncertainty (m/s)
     }
 
