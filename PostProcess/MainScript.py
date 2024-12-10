@@ -769,3 +769,40 @@ axs.grid(True)
 axs.legend()
 
 # %%
+df_baseline
+# %%
+
+# Reformat cfd data to match overleaf format(J;Ct;Cp;Eta)
+df_baseline_post = df_baseline.drop(['RPM', 'Thrust', 'Power', 'Torque'], axis=1)
+df_severe_post = df_severe.drop(['RPM', 'Thrust', 'Power', 'Torque'], axis=1)
+
+# Export to .txt files as Baseline_CFD_data.txt and Severe_CFD_data.txt to file directory /CFD
+df_baseline_post.to_csv('../CFD/Baseline_CFD_data.txt', sep=';', index=False)
+df_severe_post.to_csv('../CFD/Severe_CFD_data.txt', sep=';', index=False)
+
+# %%
+ # Export the mean values and uncertainties to a .txt file for baseline and severe data with the included parameters(J;Ct;Cp;Eta) and there errors as new dataframes 
+df_baseline_errors = pd.DataFrame({'J': J_range, 'Ct': mean_Ct_baseline, 'Cp': mean_Cp_baseline, 'Eta': mean_eta_baseline, 'std_ct': std_Ct_baseline, 'std_cp': std_Cp_baseline, 'std_eta': std_eta_baseline})
+df_severe_errors = pd.DataFrame({'J': J_range, 'Ct': mean_Ct_severe, 'Cp': mean_Cp_severe, 'Eta': mean_eta_severe, 'std_ct': std_Ct_severe, 'std_cp': std_Cp_severe, 'std_eta': std_eta_severe})
+
+#Add the taylor errors to the dataframes
+df_baseline_errors['Ct_error'] = CT_errors
+df_baseline_errors['Cp_error'] = CP_errors
+df_baseline_errors['Eta_error'] = Eta_errors
+
+df_severe_errors['Ct_error'] = CT_errors_severe
+df_severe_errors['Cp_error'] = CP_errors_severe
+df_severe_errors['Eta_error'] = Eta_errors_severe
+
+
+# Reduce the data points in the dataframes to 14 points
+df_baseline_errors = df_baseline_errors.iloc[::2]
+df_severe_errors = df_severe_errors.iloc[::2]
+
+
+# Export to .txt
+df_baseline_errors.to_csv('../CFD/Baseline_exp_PP.txt', sep=';', index=False)
+df_severe_errors.to_csv('../CFD/Severe_exp_PP.txt', sep=';', index=False)
+
+
+# %%
