@@ -135,20 +135,21 @@ for file_name in test_files:
     # Read the test data
     TestData = pd.read_csv(file_path, delimiter='\t')
 
-    # Calculate torque and other derived metrics
-    TestData['torque'] = abs(0.019 * (TestData['LoadL'] + TestData['LoadR']) * p[0])
-    Dia = 0.2286
-    TestData['n'] = TestData['RPM'] / 60  # Revolutions per second
-    rho = TestData['rho']
-    TestData['J'] = TestData['U'] / (TestData['n'] * Dia)
-    TestData['Thrust'] = TestData['Thrust'] * pT[0]
-    TestData['Ct'] = TestData['Thrust'] / (rho * (TestData['n'] ** 2) * (Dia ** 4))
-    TestData['P'] = 2 * np.pi * TestData['n'] * TestData['torque']
-    TestData['Cp'] = TestData['P'] / (rho * (TestData['n'] ** 3) * (Dia ** 5))
-    TestData['eta'] = TestData['J'] * TestData['Ct'] / TestData['Cp']
 
     # Separate baseline and severe data
     if 'Baseline' in file_name:
+        # Calculate torque and other derived metrics
+        TestData['torque'] = abs(0.019 * (TestData['LoadL'] + TestData['LoadR']) * p[0])
+        Dia = 0.226
+        TestData['n'] = TestData['RPM'] / 60  # Revolutions per second
+        rho = TestData['rho']
+        TestData['J'] = TestData['U'] / (TestData['n'] * Dia)
+        TestData['Thrust'] = TestData['Thrust'] * pT[0]
+        TestData['Ct'] = TestData['Thrust'] / (rho * (TestData['n'] ** 2) * (Dia ** 4))
+        TestData['P'] = 2 * np.pi * TestData['n'] * TestData['torque']
+        TestData['Cp'] = TestData['P'] / (rho * (TestData['n'] ** 3) * (Dia ** 5))
+        TestData['eta'] = TestData['J'] * TestData['Ct'] / TestData['Cp']
+
         all_J_baseline.append(TestData['J'])
         all_Ct_baseline.append(TestData['Ct'])
         all_Cp_baseline.append(TestData['Cp'])
@@ -160,6 +161,18 @@ for file_name in test_files:
         all_pressure_baseline.append(TestData['Pa'])
 
     elif 'Severe' in file_name:
+        # Calculate torque and other derived metrics
+        TestData['torque'] = abs(0.019 * (TestData['LoadL'] + TestData['LoadR']) * p[0])
+        Dia = 0.2288
+        TestData['n'] = TestData['RPM'] / 60  # Revolutions per second
+        rho = TestData['rho']
+        TestData['J'] = TestData['U'] / (TestData['n'] * Dia)
+        TestData['Thrust'] = TestData['Thrust'] * pT[0]
+        TestData['Ct'] = TestData['Thrust'] / (rho * (TestData['n'] ** 2) * (Dia ** 4))
+        TestData['P'] = 2 * np.pi * TestData['n'] * TestData['torque']
+        TestData['Cp'] = TestData['P'] / (rho * (TestData['n'] ** 3) * (Dia ** 5))
+        TestData['eta'] = TestData['J'] * TestData['Ct'] / TestData['Cp']
+
         all_J_severe.append(TestData['J'])
         all_Ct_severe.append(TestData['Ct'])
         all_Cp_severe.append(TestData['Cp'])
@@ -577,6 +590,8 @@ torque_uncertainty = np.sqrt(
     (0.05 / 100 * full_scale_torque)**2   # Non-linearity
 )
 
+Dia = 0.226
+
 for i in range(len(mean_rpm_baseline)):
     # Sensor uncertainties
     uncertainties = {
@@ -673,6 +688,7 @@ torque_uncertainty = np.sqrt(
     (0.05 / 100 * full_scale_torque)**2   # Non-linearity
     )
 
+Dia = 0.2288
 
 for i in range(len(mean_rpm_severe)):
     # Sensor uncertainties
