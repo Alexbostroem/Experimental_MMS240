@@ -822,3 +822,25 @@ df_severe_errors.to_csv('../CFD/Severe_exp_PP.txt', sep=';', index=False)
 
 
 # %%
+# Calculate the avg % diffrence between the efficiency for both CFD baseline and severe data
+eta_baseline = df_baseline['Eta']
+eta_severe = df_severe['Eta']
+
+diff_cfd = np.mean(eta_baseline - eta_severe)
+
+
+diff_cfd * 100
+
+# %%
+
+# Calculate the avg % diffrence between the efficiency for both experimental baseline and severe data
+eta_baseline_exp = df_baseline_errors['Eta']
+eta_severe_exp = df_severe_errors['Eta']
+
+diff_exp = np.mean(eta_severe_exp - eta_baseline_exp)
+
+diff_exp * 100
+
+
+
+# %%
